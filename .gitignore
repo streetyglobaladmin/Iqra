@@ -7,4 +7,7 @@ android/app/build/
 ios/Pods/
 *.iml
 .idea/
-deploy/
+deploy/iqra-app/
+deploy/iqra-studio/
+deploy/nuerizo-control/
+deploy/iqra-website/
