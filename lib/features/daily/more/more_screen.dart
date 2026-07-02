@@ -7,11 +7,14 @@ import '../../../core/state/app_state.dart';
 import '../qibla/qibla_screen.dart';
 import '../tasbih/tasbih_screen.dart';
 import '../duas/duas_screen.dart';
+import '../hadith/hadith_screen.dart';
 import '../scholar/scholar_screen.dart';
 import '../calendar/hijri_calendar_screen.dart';
 import '../settings/settings_screen.dart';
+import '../articles/articles_screen.dart';
 import '../../hub/hub_shell.dart';
 import '../../auth/login_screen.dart';
+import '../../auth/signup_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -23,12 +26,16 @@ class MoreScreen extends StatelessWidget {
     final text = IqraText(s);
     final user = appState.currentUser;
 
+    // All of these are guest-accessible per the guest-first requirement —
+    // no login gate applied to any item in this list.
     final items = [
       (Icons.explore_outlined, 'Qibla', const QiblaScreen()),
       (Icons.circle_outlined, 'Tasbīḥ', const TasbihScreen()),
       (Icons.favorite_border, 'Duʿās', const DuasScreen()),
+      (Icons.menu_book_outlined, 'Daily Hadith', const HadithScreen()),
       (Icons.school_outlined, 'Scholars', const ScholarScreen()),
       (Icons.calendar_month_outlined, 'Hijri Calendar', const HijriCalendarScreen()),
+      (Icons.article_outlined, 'Articles & Blog', const ArticlesScreen()),
       (Icons.settings_outlined, 'Settings', const SettingsScreen()),
     ];
 
@@ -54,7 +61,7 @@ class MoreScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(user?.name ?? 'Guest', style: text.cardTitle(size: 16)),
-                    Text(user?.email ?? '', style: text.metaDim()),
+                    Text(user?.email ?? 'Not signed in', style: text.metaDim()),
                   ],
                 ),
               ),
@@ -84,21 +91,47 @@ class MoreScreen extends StatelessWidget {
                 ),
               )),
           const SizedBox(height: 20),
-          Center(
-            child: TextButton.icon(
-              onPressed: () async {
-                await appState.logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              },
-              icon: Icon(Icons.logout, size: 16, color: s.appTextDim),
-              label: Text('Sign out', style: TextStyle(color: s.appTextDim)),
+          if (user != null)
+            Center(
+              child: TextButton.icon(
+                onPressed: () async {
+                  // Guest-first: signing out returns to browsing as a
+                  // guest, never to a forced login screen.
+                  await appState.logout();
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                icon: Icon(Icons.logout, size: 16, color: s.appTextDim),
+                label: Text('Sign out', style: TextStyle(color: s.appTextDim)),
+              ),
+            )
+          else
+            Center(
+              child: Column(
+                children: [
+                  Text('Sign in to unlock enrollment, live classes, and personalized progress.',
+                      style: text.metaDim(), textAlign: TextAlign.center),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        ),
+                        child: const Text('Log In'),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SignupScreen()),
+                        ),
+                        child: const Text('Create Account'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 20),
           Center(child: IqraWordmark(fontSize: 16, color: s.appTextMuted)),
         ],

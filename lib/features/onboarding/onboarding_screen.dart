@@ -5,7 +5,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../models/prayer_settings.dart';
-import '../auth/auth_gate.dart';
+import '../hub/hub_shell.dart';
 
 /// Real first-run flow: welcome -> location -> madhab -> calculation
 /// method -> begin. Persists a working [PrayerSettings] object that the
@@ -305,8 +305,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
     await appState.completeOnboarding(settings);
     if (mounted) {
+      // Guest-first: finishing onboarding lands on the Hub directly,
+      // never a forced login screen.
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AuthGate()),
+        MaterialPageRoute(builder: (_) => const HubShell()),
       );
     }
   }

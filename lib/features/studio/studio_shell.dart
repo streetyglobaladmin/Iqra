@@ -5,8 +5,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/numerals.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/state/app_state.dart';
+import '../../core/auth/guest_locked_screen.dart';
 import '../../models/class_model.dart';
-import '../../models/payment_record.dart';
 import '../../data/repositories/class_repository.dart';
 import '../../data/repositories/payment_repository.dart';
 import 'create_class_sheet.dart';
@@ -26,20 +26,29 @@ class _StudioShellState extends State<StudioShell> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final user = appState.currentUser;
+
+    if (user == null) {
+      return const GuestLockedScreen(
+        surfaceName: 'IQRA Studio',
+        icon: Icons.workspace_premium_outlined,
+        message: 'Teachers sign in to manage classes, students, and earnings.',
+      );
+    }
+
     final s = context.surface;
     final text = IqraText(s);
     final useArabic = appState.prayerSettings.useArabicNumerals;
 
-    final classes = user != null ? ClassRepository.instance.getByTeacher(user.id) : <ClassSession>[];
+    final classes = ClassRepository.instance.getByTeacher(user.id);
     final totalStudents = classes.fold<int>(0, (sum, c) => sum + c.studentIds.length);
-    final payments = user != null ? PaymentRepository.instance.getByUser(user.id) : <PaymentRecord>[];
+    final payments = PaymentRepository.instance.getByUser(user.id);
     final totalEarningsMinor = payments.fold<int>(0, (sum, p) => sum + p.amountMinor);
 
     return Scaffold(
       backgroundColor: s.appBg,
       appBar: AppBar(title: const Text('IQRA Studio')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openCreateClass(context, user?.id),
+        onPressed: () => _openCreateClass(context, user.id),
         icon: const Icon(Icons.add),
         label: const Text('New class'),
         backgroundColor: IqraTokens.gold,
@@ -68,7 +77,7 @@ class _StudioShellState extends State<StudioShell> {
                 title: 'No classes yet',
                 subtitle: 'Create your first class to start teaching. Add a Zoom or Google Meet link so students can join live.',
                 action: ElevatedButton.icon(
-                  onPressed: () => _openCreateClass(context, user?.id),
+                  onPressed: () => _openCreateClass(context, user.id),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('Create a class'),
                 ),

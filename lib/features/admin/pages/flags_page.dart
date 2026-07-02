@@ -3,6 +3,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/release_badge.dart';
 import '../../../models/release_state.dart';
+import '../../../models/feature_access_level.dart';
 import '../../../data/repositories/feature_flag_repository.dart';
 import '../../../data/repositories/audit_log_repository.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -93,6 +94,63 @@ class _FeatureFlagsPageState extends State<FeatureFlagsPage> {
                         },
                       ),
                     ],
+                  ),
+                  const Divider(height: 20),
+                  Row(
+                    children: [
+                      Icon(Icons.badge_outlined, size: 15, color: IqraTokens.lapisLt),
+                      const SizedBox(width: 6),
+                      Text('Feature access level — who can use this', style: text.metaDim()),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    flag.isGuestAccessible
+                        ? 'Public — no login required'
+                        : 'Login required (${flag.allowedAccessLevels.map((a) => a.label).join(", ")})',
+                    style: text.body(
+                      size: 11.5,
+                      weight: FontWeight.w700,
+                    ).copyWith(
+                      color: flag.isGuestAccessible ? IqraTokens.stateSuccess : IqraTokens.stateWarn,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: FeatureAccessLevel.values.map((level) {
+                      final selected = flag.allowedAccessLevels.contains(level);
+                      return FilterChip(
+                        label: Text(level.label, style: const TextStyle(fontSize: 10.5)),
+                        selected: selected,
+                        tooltip: level.description,
+                        selectedColor: IqraTokens.lapisLt.withValues(alpha: 0.22),
+                        onSelected: (nowSelected) async {
+                          final updated = Set<FeatureAccessLevel>.from(flag.allowedAccessLevels);
+                          if (nowSelected) {
+                            updated.add(level);
+                          } else {
+                            updated.remove(level);
+                          }
+                          // Never allow a flag to end up with zero access
+                          // levels — that would silently hide it from
+                          // everyone including staff intent.
+                          if (updated.isEmpty) return;
+                          await FeatureFlagRepository.instance.updateAccessLevels(flag.key, updated);
+                          await AuditLogRepository.instance.record(
+                            actorId: UserRepository.instance.currentUser?.id ?? 'admin',
+                            actorName: UserRepository.instance.currentUser?.name ?? 'Admin',
+                            action: 'flag.access_level',
+                            subjectType: 'feature_flag',
+                            subjectId: flag.key,
+                            summary:
+                                '${nowSelected ? "Added" : "Removed"} "${level.label}" access on "${flag.name}"',
+                          );
+                          setState(() {});
+                        },
+                      );
+                    }).toList(),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import '../../models/app_role.dart';
 import '../../models/prayer_settings.dart';
 import '../../models/tasbih_state.dart';
 import '../../models/reader_state.dart';
+import '../../models/feature_access_level.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/preferences_repository.dart';
 import '../../data/repositories/feature_flag_repository.dart';
@@ -79,6 +80,45 @@ class AppState extends ChangeNotifier {
       currentUser?.hasRole(AppRole.admin) == true ||
       currentUser?.hasRole(AppRole.superAdmin) == true;
 
+  /// True whenever there is no signed-in account. IQRA is guest-first —
+  /// this never blocks app launch or Daily/Hub browsing, it only informs
+  /// whether a protected action should show the login prompt.
+  bool get isGuest => currentUser == null;
+
+  /// The full set of access levels the current visitor satisfies right
+  /// now — a guest satisfies only [FeatureAccessLevel.publicGuest]; a
+  /// signed-in user additionally satisfies [FeatureAccessLevel.loggedInUser]
+  /// plus one entry per role they hold.
+  Set<FeatureAccessLevel> get myAccessLevels {
+    if (currentUser == null) return {FeatureAccessLevel.publicGuest};
+    final levels = <FeatureAccessLevel>{FeatureAccessLevel.loggedInUser};
+    for (final role in currentUser!.roles) {
+      switch (role) {
+        case AppRole.student:
+          levels.add(FeatureAccessLevel.student);
+          break;
+        case AppRole.parent:
+          levels.add(FeatureAccessLevel.parent);
+          break;
+        case AppRole.teacher:
+          levels.add(FeatureAccessLevel.teacher);
+          break;
+        case AppRole.admin:
+          levels.add(FeatureAccessLevel.academyAdmin);
+          break;
+        case AppRole.superAdmin:
+          levels
+            ..add(FeatureAccessLevel.academyAdmin)
+            ..add(FeatureAccessLevel.superAdmin);
+          break;
+      }
+    }
+    // TODO: once real subscription billing lands, add
+    // FeatureAccessLevel.premium / .enterprise here based on the user's
+    // active plan instead of always leaving them unset.
+    return levels;
+  }
+
   Future<void> setThemeMode(ThemeMode mode) async {
     themeMode = mode;
     await _prefsRepo.setThemeMode(mode == ThemeMode.light ? 'light' : 'dark');
@@ -106,6 +146,12 @@ class AppState extends ChangeNotifier {
   bool isFeatureEnabled(String key) => _flagRepo.isEnabled(
         key,
         isStaff: isStaff,
-        isPremiumUser: false,
+        isPremiumUser: myAccessLevels.contains(FeatureAccessLevel.premium),
+        callerAccessLevels: myAccessLevels,
       );
+
+  /// Whether the given feature is reachable by the current visitor without
+  /// signing in — used by the guest-first UI to decide whether to navigate
+  /// straight through or pop the login/register prompt first.
+  bool isGuestAllowed(String key) => _flagRepo.getByKey(key)?.isGuestAccessible ?? false;
 }

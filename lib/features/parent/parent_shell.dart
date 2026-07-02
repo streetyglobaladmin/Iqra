@@ -5,6 +5,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/numerals.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/state/app_state.dart';
+import '../../core/auth/guest_locked_screen.dart';
 import '../../data/repositories/student_repository.dart';
 import '../../data/repositories/class_repository.dart';
 import '../../data/repositories/payment_repository.dart';
@@ -19,12 +20,21 @@ class ParentShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final user = appState.currentUser;
+
+    if (user == null) {
+      return const GuestLockedScreen(
+        surfaceName: 'Parent Dashboard',
+        icon: Icons.family_restroom_outlined,
+        message: "Track your child's progress, attendance, and invoices from your own account.",
+      );
+    }
+
     final s = context.surface;
     final text = IqraText(s);
     final useArabic = appState.prayerSettings.useArabicNumerals;
 
-    final children = user != null ? StudentRepository.instance.getByParentId(user.id) : [];
-    final payments = user != null ? PaymentRepository.instance.getByUser(user.id) : [];
+    final children = StudentRepository.instance.getByParentId(user.id);
+    final payments = PaymentRepository.instance.getByUser(user.id);
 
     return Scaffold(
       backgroundColor: s.appBg,

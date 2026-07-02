@@ -5,6 +5,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/numerals.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/state/app_state.dart';
+import '../../core/auth/guest_locked_screen.dart';
 import '../../models/class_model.dart';
 import '../../data/repositories/student_repository.dart';
 import '../../data/repositories/class_repository.dart';
@@ -25,11 +26,23 @@ class _StudentShellState extends State<StudentShell> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final user = appState.currentUser;
+
+    // Guest-first: Student dashboard is login-required. If someone reaches
+    // this route without a session (deep link, back-stack edge case),
+    // show the gate instead of a broken/empty personal dashboard.
+    if (user == null) {
+      return const GuestLockedScreen(
+        surfaceName: 'Student',
+        icon: Icons.school_outlined,
+        message: 'Your classes, memorization tracker, and homework are tied to your account.',
+      );
+    }
+
     final s = context.surface;
     final text = IqraText(s);
     final useArabic = appState.prayerSettings.useArabicNumerals;
 
-    final profile = user != null ? StudentRepository.instance.getByUserId(user.id) : null;
+    final profile = StudentRepository.instance.getByUserId(user.id);
     final classes = profile != null ? ClassRepository.instance.getByStudent(profile.id) : <ClassSession>[];
 
     return Scaffold(
@@ -50,7 +63,7 @@ class _StudentShellState extends State<StudentShell> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Welcome, ${user?.name ?? "Student"}',
+                      Text('Welcome, ${user.name}',
                           style: const TextStyle(fontFamily: IqraFonts.display, fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
                       const SizedBox(height: 4),
                       Text(

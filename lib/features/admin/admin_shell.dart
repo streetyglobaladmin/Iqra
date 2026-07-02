@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
+import '../../core/state/app_state.dart';
+import '../../core/auth/guest_locked_screen.dart';
 import 'pages/flags_page.dart';
 import 'pages/users_page.dart';
 import 'pages/pricing_page.dart';
@@ -44,6 +46,18 @@ class _AdminShellState extends State<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+
+    // Guest-first + admin-only: the Control Center is never reachable
+    // without an authenticated Academy Admin / Super Admin session.
+    if (!appState.isStaff) {
+      return const GuestLockedScreen(
+        surfaceName: 'Nuerizo Control Center',
+        icon: Icons.admin_panel_settings_outlined,
+        message: 'Restricted to Academy Admin and Super Admin accounts.',
+      );
+    }
+
     final s = context.surface;
     return Scaffold(
       backgroundColor: s.appBg,

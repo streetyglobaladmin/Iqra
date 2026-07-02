@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import '../../models/feature_flag.dart';
 import '../../models/release_state.dart';
+import '../../models/feature_access_level.dart';
 import '../local/db.dart';
 import '../local/hive_boxes.dart';
 
@@ -29,6 +30,7 @@ class FeatureFlagRepository {
         description:
             'Prayer times, Qibla, Qur\'ān, dhikr, duas, calendar, learn, scholars.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -37,6 +39,7 @@ class FeatureFlagRepository {
         name: 'Teacher / Scholar Studio',
         description: 'Workspace for independent Quran teachers: classes, students, live sessions, earnings.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.teacher, FeatureAccessLevel.academyAdmin, FeatureAccessLevel.superAdmin},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -45,6 +48,7 @@ class FeatureFlagRepository {
         name: 'Student experience',
         description: 'Enrolled classes, memorization tracker, homework, live class join.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.student, FeatureAccessLevel.superAdmin},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -53,6 +57,7 @@ class FeatureFlagRepository {
         name: 'Parent dashboard',
         description: "Child progress, attendance, homework, invoices.",
         releaseState: ReleaseState.beta,
+        allowedAccessLevels: {FeatureAccessLevel.parent, FeatureAccessLevel.superAdmin},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -61,14 +66,16 @@ class FeatureFlagRepository {
         name: 'Public marketing website',
         description: 'nuerizo.cloud + IQRA marketing site.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
       FeatureFlag(
         key: 'hub.app',
         module: 'IQRA Hub',
         name: 'IQRA Hub (ecosystem launcher)',
-        description: 'Cross-surface launcher showing all modules the signed-in user can access.',
+        description: 'Cross-surface launcher — guests see Daily; signed-in users additionally see the modules their roles unlock.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -77,6 +84,7 @@ class FeatureFlagRepository {
         name: 'Admin dashboard',
         description: 'Internal operator console.',
         releaseState: ReleaseState.internal,
+        allowedAccessLevels: {FeatureAccessLevel.academyAdmin, FeatureAccessLevel.superAdmin},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -85,6 +93,7 @@ class FeatureFlagRepository {
         name: 'IQRA Kids (gamified learning)',
         description: 'Gamified self-paced learning for younger students.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -93,6 +102,7 @@ class FeatureFlagRepository {
         name: 'Multi-teacher Academy / white-label',
         description: 'Enterprise multi-teacher workspace.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.academyAdmin, FeatureAccessLevel.enterprise},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -101,6 +111,7 @@ class FeatureFlagRepository {
         name: 'Teacher discovery marketplace',
         description: 'Parents discover and book independent teachers.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -109,6 +120,7 @@ class FeatureFlagRepository {
         name: 'Scholarly Q&A + study circles',
         description: 'Moderated community Q&A.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -118,6 +130,7 @@ class FeatureFlagRepository {
         description: "Lets teachers ask an LLM about a student's progress.",
         releaseState: ReleaseState.beta,
         rolloutPct: 25,
+        allowedAccessLevels: {FeatureAccessLevel.teacher},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -126,6 +139,7 @@ class FeatureFlagRepository {
         name: 'Stripe payments',
         description: 'Global card payments via Stripe. Simulated until API keys are added.',
         releaseState: ReleaseState.internal,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -134,6 +148,7 @@ class FeatureFlagRepository {
         name: 'Razorpay payments',
         description: 'India UPI/card payments via Razorpay. Simulated until API keys are added.',
         releaseState: ReleaseState.internal,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -142,6 +157,7 @@ class FeatureFlagRepository {
         name: 'Manual / local payments',
         description: 'Bank transfer / cash reference tracked manually by the teacher.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -150,6 +166,7 @@ class FeatureFlagRepository {
         name: 'Push notifications',
         description: 'Firebase Cloud Messaging push. Architecture only until credentials are added.',
         releaseState: ReleaseState.internal,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -158,6 +175,7 @@ class FeatureFlagRepository {
         name: 'LiveKit native video',
         description: 'In-app video classes via LiveKit. Zoom/Meet links used until this ships.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -166,6 +184,7 @@ class FeatureFlagRepository {
         name: 'Sadaqah donation flow',
         description: 'First-class donation primitive at emotionally-resonant moments.',
         releaseState: ReleaseState.beta,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -174,6 +193,7 @@ class FeatureFlagRepository {
         name: 'Referral program',
         description: 'Invite-a-friend rewards.',
         releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
       FeatureFlag(
@@ -182,6 +202,83 @@ class FeatureFlagRepository {
         name: 'In-app advertisements',
         description: 'Sponsored placements on Home / Learn / Website.',
         releaseState: ReleaseState.hidden,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
+        updatedAt: now,
+      ),
+      // ── Guest-first action gates ──────────────────────────────────
+      // Fine-grained per-action flags so admin can flip exactly which
+      // identity-bound actions require login, independent of the
+      // module-level flags above.
+      FeatureFlag(
+        key: 'action.class_enrollment',
+        module: 'Guest Access Rules',
+        name: 'Enrolling in a class',
+        description: 'Whether a visitor must be signed in to enroll in a class.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.live_class_join',
+        module: 'Guest Access Rules',
+        name: 'Joining a live class',
+        description: 'Whether a visitor must be signed in to join a scheduled live session.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.student, FeatureAccessLevel.superAdmin},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.book_teacher',
+        module: 'Guest Access Rules',
+        name: 'Booking a teacher',
+        description: 'Whether a visitor must be signed in to book a teacher/session.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.save_progress',
+        module: 'Guest Access Rules',
+        name: 'Saving progress',
+        description: 'Whether progress (memorization, bookmarks, streaks) requires an account to persist across devices.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.homework_submission',
+        module: 'Guest Access Rules',
+        name: 'Submitting homework',
+        description: 'Whether a visitor must be signed in as a student to submit homework.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.student},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.certificates',
+        module: 'Guest Access Rules',
+        name: 'Certificates',
+        description: 'Whether certificates require a signed-in student account.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.student},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.private_messaging',
+        module: 'Guest Access Rules',
+        name: 'Private messages',
+        description: 'Whether direct messaging between users requires login.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
+        updatedAt: now,
+      ),
+      FeatureFlag(
+        key: 'action.personalized_notifications',
+        module: 'Guest Access Rules',
+        name: 'Personalized notifications',
+        description: 'Whether targeted/personalized notifications require an account.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.loggedInUser},
         updatedAt: now,
       ),
     ];
@@ -204,27 +301,42 @@ class FeatureFlagRepository {
   }
 
   /// Whether a feature should be visible/usable for the given [isStaff]
-  /// (admin/teacher-internal) and [isPremiumUser] context. This is the
-  /// real evaluation logic the whole app runs through — no UI ever
-  /// hardcodes visibility.
-  bool isEnabled(String key, {bool isStaff = false, bool isPremiumUser = false}) {
+  /// (admin/teacher-internal), [isPremiumUser], and [callerAccessLevels]
+  /// context. This is the real evaluation logic the whole app runs
+  /// through — no UI ever hardcodes visibility.
+  ///
+  /// Two independent gates must BOTH pass:
+  ///  1. [ReleaseState] — is this feature released to anyone yet?
+  ///  2. [FeatureAccessLevel] — does this specific caller qualify for the
+  ///     audience the admin configured (Public Guest, Logged-in User,
+  ///     Student, Parent, Teacher, Academy Admin, Super Admin, Premium,
+  ///     Enterprise)?
+  bool isEnabled(
+    String key, {
+    bool isStaff = false,
+    bool isPremiumUser = false,
+    Set<FeatureAccessLevel>? callerAccessLevels,
+  }) {
     final flag = getByKey(key);
     if (flag == null) return false;
     if (flag.killswitch) return false;
-    switch (flag.releaseState) {
-      case ReleaseState.hidden:
-        return false;
-      case ReleaseState.internal:
-        return isStaff;
-      case ReleaseState.beta:
-        return isStaff || true; // rollout% handled by caller/UI badge
-      case ReleaseState.public:
-        return true;
-      case ReleaseState.premium:
-        return isStaff || isPremiumUser;
-      case ReleaseState.enterprise:
-        return isStaff;
-    }
+
+    final releaseOk = switch (flag.releaseState) {
+      ReleaseState.hidden => false,
+      ReleaseState.internal => isStaff,
+      ReleaseState.beta => isStaff || true, // rollout% handled by caller/UI badge
+      ReleaseState.public => true,
+      ReleaseState.premium => isStaff || isPremiumUser,
+      ReleaseState.enterprise => isStaff,
+    };
+    if (!releaseOk) return false;
+
+    // Staff (admin/super admin) can always see everything for
+    // moderation/support purposes, regardless of configured access level.
+    if (isStaff) return true;
+
+    final callerLevels = callerAccessLevels ?? {FeatureAccessLevel.publicGuest};
+    return flag.allowedAccessLevels.any(callerLevels.contains);
   }
 
   Future<void> updateReleaseState(String key, ReleaseState state) async {
@@ -243,5 +355,15 @@ class FeatureFlagRepository {
     final flag = getByKey(key);
     if (flag == null) return;
     await _box.put(key, flag.copyWith(rolloutPct: pct).toMap());
+  }
+
+  /// Admin-panel entry point for changing WHO can access a feature —
+  /// e.g. flipping "Enrolling in a class" from Logged-in User to Public
+  /// Guest, or restricting a module to Premium only. No code changes,
+  /// no redeploy.
+  Future<void> updateAccessLevels(String key, Set<FeatureAccessLevel> levels) async {
+    final flag = getByKey(key);
+    if (flag == null) return;
+    await _box.put(key, flag.copyWith(allowedAccessLevels: levels).toMap());
   }
 }

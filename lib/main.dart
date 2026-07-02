@@ -4,8 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'core/state/app_state.dart';
 import 'data/local/db.dart';
 import 'data/repositories/pricing_repository.dart';
-import 'features/onboarding/onboarding_screen.dart';
-import 'features/auth/auth_gate.dart';
+import 'features/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,9 +34,11 @@ class IqraApp extends StatelessWidget {
       theme: IqraTheme.light(),
       darkTheme: IqraTheme.dark(),
       themeMode: appState.themeMode,
-      home: appState.onboardingComplete
-          ? const AuthGate()
-          : const OnboardingScreen(),
+      // Guest-first launch flow: Splash -> (onboarding if first run) ->
+      // guest-accessible IQRA Hub. Login is never forced here; it is only
+      // requested when a guest taps a protected feature (see
+      // core/auth/login_gate.dart and core/auth/guest_locked_screen.dart).
+      home: const SplashScreen(),
     );
   }
 }

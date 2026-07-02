@@ -14,6 +14,7 @@ import '../parent/parent_shell.dart';
 import '../studio/studio_shell.dart';
 import '../admin/admin_shell.dart';
 import '../auth/login_screen.dart';
+import '../../core/auth/login_gate.dart';
 
 /// IQRA Hub: the ecosystem launcher. Shows every module the signed-in
 /// user's roles unlock, gated by real feature flags — not a static list.
@@ -28,6 +29,11 @@ class HubShell extends StatelessWidget {
     final text = IqraText(s);
     final flags = FeatureFlagRepository.instance;
 
+    // Guest-first: IQRA Daily is always open. The four identity-bound
+    // dashboards remain visible to guests too (so they can discover what
+    // the ecosystem offers), but tapping one as a guest pops the
+    // non-blocking login/register prompt instead of navigating straight
+    // in — nobody is forced to authenticate before reaching this screen.
     final modules = <_ModuleCard>[
       _ModuleCard(
         title: 'IQRA Daily',
@@ -35,53 +41,77 @@ class HubShell extends StatelessWidget {
         icon: Icons.wb_twilight_outlined,
         color: IqraTokens.emeraldLt,
         flagKey: 'daily.app',
-        visible: true,
+        locked: false,
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const DailyShell())),
       ),
-      if (user?.hasRole(AppRole.student) == true)
+      if (user == null || user.hasRole(AppRole.student))
         _ModuleCard(
           title: 'Student',
           subtitle: 'Your classes, memorization & homework',
           icon: Icons.school_outlined,
           color: IqraTokens.lapisLt,
           flagKey: 'student.portal',
-          visible: true,
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StudentShell())),
+          locked: user == null,
+          onTap: () => requireLogin(
+            context,
+            isLoggedIn: user != null,
+            title: 'Sign in to view Student',
+            message: 'Your classes, memorization tracker, and homework are saved to your account.',
+            onAuthenticated: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const StudentShell())),
+          ),
         ),
-      if (user?.hasRole(AppRole.parent) == true)
+      if (user == null || user.hasRole(AppRole.parent))
         _ModuleCard(
           title: 'Parent Dashboard',
           subtitle: "Track your child's progress",
           icon: Icons.family_restroom_outlined,
           color: IqraTokens.rubyLt,
           flagKey: 'parent.portal',
-          visible: true,
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ParentShell())),
+          locked: user == null,
+          onTap: () => requireLogin(
+            context,
+            isLoggedIn: user != null,
+            title: 'Sign in to view Parent Dashboard',
+            message: "Track your child's progress, attendance, and invoices from your own account.",
+            onAuthenticated: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const ParentShell())),
+          ),
         ),
-      if (user?.hasRole(AppRole.teacher) == true)
+      if (user == null || user.hasRole(AppRole.teacher))
         _ModuleCard(
           title: 'IQRA Studio',
           subtitle: 'Teach classes, manage students, earnings',
           icon: Icons.workspace_premium_outlined,
           color: IqraTokens.saffron,
           flagKey: 'studio.app',
-          visible: true,
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StudioShell())),
+          locked: user == null,
+          onTap: () => requireLogin(
+            context,
+            isLoggedIn: user != null,
+            title: 'Sign in to open Studio',
+            message: 'Teachers sign in to manage classes, students, and earnings.',
+            onAuthenticated: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const StudioShell())),
+          ),
         ),
-      if (appState.isStaff)
+      if (user == null || appState.isStaff)
         _ModuleCard(
           title: 'Nuerizo Control Center',
           subtitle: 'Admin: flags, users, pricing, CMS, analytics',
           icon: Icons.admin_panel_settings_outlined,
           color: IqraTokens.gold,
           flagKey: 'admin.control_center',
-          visible: true,
-          onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AdminShell())),
+          locked: user == null,
+          onTap: () => requireLogin(
+            context,
+            isLoggedIn: user != null,
+            title: 'Admin sign-in required',
+            message: 'The Nuerizo Control Center is restricted to Academy Admin and Super Admin accounts.',
+            onAuthenticated: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const AdminShell())),
+          ),
         ),
     ];
 
@@ -109,19 +139,28 @@ class HubShell extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.logout, color: s.appTextDim, size: 20),
-                      tooltip: 'Sign out',
-                      onPressed: () async {
-                        await context.read<AppState>().logout();
-                        if (context.mounted) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                    ),
+                    if (user != null)
+                      IconButton(
+                        icon: Icon(Icons.logout, color: s.appTextDim, size: 20),
+                        tooltip: 'Sign out',
+                        onPressed: () async {
+                          // Guest-first: signing out returns to the Hub as
+                          // a guest (this widget rebuilds automatically via
+                          // Provider), never to a forced login screen.
+                          await context.read<AppState>().logout();
+                        },
+                      )
+                    else
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          side: BorderSide(color: IqraTokens.gold.withValues(alpha: 0.6)),
+                        ),
+                        child: const Text('Log In', style: TextStyle(fontSize: 12.5)),
+                      ),
                   ],
                 ),
               ),
@@ -187,6 +226,10 @@ class HubShell extends StatelessWidget {
                         const SizedBox(width: 8),
                         ReleaseBadge(state: flag.releaseState, fontSize: 8.5),
                       ],
+                      if (m.locked) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.lock_outline, size: 13, color: s.appTextMuted),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -231,7 +274,7 @@ class _ModuleCard {
   final IconData icon;
   final Color color;
   final String flagKey;
-  final bool visible;
+  final bool locked;
   final VoidCallback onTap;
 
   _ModuleCard({
@@ -240,7 +283,7 @@ class _ModuleCard {
     required this.icon,
     required this.color,
     required this.flagKey,
-    required this.visible,
+    required this.locked,
     required this.onTap,
   });
 }

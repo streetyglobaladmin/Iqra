@@ -12,6 +12,7 @@ import '../../../data/static/quran_content.dart';
 import '../qibla/qibla_screen.dart';
 import '../tasbih/tasbih_screen.dart';
 import '../duas/duas_screen.dart';
+import '../hadith/hadith_screen.dart';
 import '../scholar/scholar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -364,6 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TasbihScreen())))),
       (_QuickAction('Duʿās', 'Daily supplications', Icons.favorite_border, IqraTokens.rubyLt,
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuasScreen())))),
+      (_QuickAction('Hadith', 'Daily narration', Icons.menu_book_outlined, IqraTokens.goldLt,
+          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HadithScreen())))),
       (_QuickAction('Ask Scholar', 'Find a teacher', Icons.school_outlined, IqraTokens.saffron,
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScholarScreen())))),
     ];
