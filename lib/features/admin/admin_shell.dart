@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/state/app_state.dart';
 import '../../core/auth/guest_locked_screen.dart';
+import '../../core/widgets/responsive.dart';
 import 'pages/flags_page.dart';
 import 'pages/users_page.dart';
 import 'pages/pricing_page.dart';
@@ -61,6 +62,10 @@ class _AdminShellState extends State<AdminShell> {
     }
 
     final s = context.surface;
+    // Responsive: the admin console is a common web-deployment target
+    // (control.nuerizo.com) opened on wide desktop browsers — cap the
+    // content column so it stays readable instead of stretching edge to
+    // edge, while the NavigationRail stays full-height on the side.
     return Scaffold(
       backgroundColor: s.appBg,
       appBar: AppBar(title: const Text('Nuerizo Control Center')),
@@ -80,7 +85,9 @@ class _AdminShellState extends State<AdminShell> {
             ),
           ),
           VerticalDivider(width: 1, color: s.appBorder),
-          Expanded(child: _pages[_index]),
+          Expanded(
+            child: ResponsiveCenter(maxWidth: 1200, child: _pages[_index]),
+          ),
         ],
       ),
     );

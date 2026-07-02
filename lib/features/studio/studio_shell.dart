@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/numerals.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/responsive.dart';
 import '../../core/state/app_state.dart';
 import '../../core/auth/guest_locked_screen.dart';
 import '../../models/class_model.dart';
@@ -54,7 +55,9 @@ class _StudioShellState extends State<StudioShell> {
         backgroundColor: IqraTokens.gold,
         foregroundColor: IqraTokens.ink,
       ),
-      body: ListView(
+      body: ResponsiveCenter(
+        maxWidth: 900,
+        child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Row(
@@ -86,6 +89,7 @@ class _StudioShellState extends State<StudioShell> {
           else
             ...classes.map((c) => _classCard(context, c, s, text, useArabic)),
         ],
+        ),
       ),
     );
   }
