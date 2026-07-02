@@ -9,11 +9,13 @@ import '../../../core/state/app_state.dart';
 import '../../../services/prayer_times_calculator.dart';
 import '../../../services/hijri_calendar.dart';
 import '../../../data/static/quran_content.dart';
+import '../../../data/repositories/lecture_repository.dart';
 import '../qibla/qibla_screen.dart';
 import '../tasbih/tasbih_screen.dart';
 import '../duas/duas_screen.dart';
 import '../hadith/hadith_screen.dart';
 import '../scholar/scholar_screen.dart';
+import '../lectures/lectures_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -109,10 +111,110 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: _buildQuickActions(context, s, text),
           ),
         ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: _buildPublicLearning(context, s, text),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublicLearning(BuildContext context, IqraSurface s, IqraText text) {
+    // Guest-first "public learning" section — no login required to browse
+    // or watch. Shows the 5 most recently published lectures.
+    final lectures = LectureRepository.instance.getAll()
+        .where((l) => l.isPublished && !l.isPremium)
+        .take(5)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('PUBLIC LECTURES', style: text.sectionHeader),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LecturesScreen())),
+              child: const Text('See all', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        if (lectures.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: s.appCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: s.appBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.play_circle_outline, color: s.appTextMuted),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No lectures published yet — free public lectures will appear here.',
+                    style: text.metaDim(),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 132,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: lectures.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final l = lectures[i];
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LecturesScreen()),
+                  ),
+                  child: Container(
+                    width: 180,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: s.appCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: s.appBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: IqraTokens.lapisLt.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(Icons.play_arrow, color: IqraTokens.lapisLt, size: 18),
+                        ),
+                        const Spacer(),
+                        Text(l.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: text.body(size: 12.5, weight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(l.scholarName, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.metaDim()),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }
@@ -367,6 +469,8 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuasScreen())))),
       (_QuickAction('Hadith', 'Daily narration', Icons.menu_book_outlined, IqraTokens.goldLt,
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HadithScreen())))),
+      (_QuickAction('Lectures', 'Public learning', Icons.play_circle_outline, IqraTokens.lapisLt,
+          () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LecturesScreen())))),
       (_QuickAction('Ask Scholar', 'Find a teacher', Icons.school_outlined, IqraTokens.saffron,
           () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScholarScreen())))),
     ];

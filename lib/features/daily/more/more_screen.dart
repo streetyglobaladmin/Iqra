@@ -12,6 +12,7 @@ import '../scholar/scholar_screen.dart';
 import '../calendar/hijri_calendar_screen.dart';
 import '../settings/settings_screen.dart';
 import '../articles/articles_screen.dart';
+import '../lectures/lectures_screen.dart';
 import '../../hub/hub_shell.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/signup_screen.dart';
@@ -33,6 +34,7 @@ class MoreScreen extends StatelessWidget {
       (Icons.circle_outlined, 'Tasbīḥ', const TasbihScreen()),
       (Icons.favorite_border, 'Duʿās', const DuasScreen()),
       (Icons.menu_book_outlined, 'Daily Hadith', const HadithScreen()),
+      (Icons.play_circle_outline, 'Public Lectures', const LecturesScreen()),
       (Icons.school_outlined, 'Scholars', const ScholarScreen()),
       (Icons.calendar_month_outlined, 'Hijri Calendar', const HijriCalendarScreen()),
       (Icons.article_outlined, 'Articles & Blog', const ArticlesScreen()),

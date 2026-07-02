@@ -7,6 +7,7 @@ import 'pages/flags_page.dart';
 import 'pages/users_page.dart';
 import 'pages/pricing_page.dart';
 import 'pages/cms_page_admin.dart';
+import 'pages/lectures_admin_page.dart';
 import 'pages/ads_page.dart';
 import 'pages/analytics_page.dart';
 import 'pages/audit_log_page.dart';
@@ -29,19 +30,20 @@ class _AdminShellState extends State<AdminShell> {
     UsersPage(),
     PricingPage(),
     CmsAdminPage(),
+    LecturesAdminPage(),
     AdsPage(),
     AnalyticsPage(),
     AuditLogPage(),
   ];
 
   final _labels = const [
-    'Flags', 'Users', 'Pricing', 'CMS', 'Ads', 'Analytics', 'Audit',
+    'Flags', 'Users', 'Pricing', 'CMS', 'Lectures', 'Ads', 'Analytics', 'Audit',
   ];
 
   final _icons = const [
     Icons.flag_outlined, Icons.people_outline, Icons.attach_money,
-    Icons.article_outlined, Icons.campaign_outlined, Icons.insights_outlined,
-    Icons.history_outlined,
+    Icons.article_outlined, Icons.play_circle_outline, Icons.campaign_outlined,
+    Icons.insights_outlined, Icons.history_outlined,
   ];
 
   @override

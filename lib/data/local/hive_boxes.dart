@@ -24,4 +24,5 @@ class HiveBoxes {
   static const bookmarks = 'bookmarks'; // duas, ayahs, etc.
   static const appSettings = 'app_settings'; // theme mode, onboarding done
   static const teachers = 'teachers';
+  static const lectures = 'lectures';
 }

@@ -27,6 +27,7 @@ class Db {
       Hive.openBox(HiveBoxes.bookmarks),
       Hive.openBox(HiveBoxes.appSettings),
       Hive.openBox(HiveBoxes.teachers),
+      Hive.openBox(HiveBoxes.lectures),
     ]);
   }
 

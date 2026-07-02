@@ -205,6 +205,15 @@ class FeatureFlagRepository {
         allowedAccessLevels: {FeatureAccessLevel.publicGuest},
         updatedAt: now,
       ),
+      FeatureFlag(
+        key: 'content.public_lectures',
+        module: 'IQRA Daily',
+        name: 'Public Lectures',
+        description: 'Guest-accessible recorded lecture library (YouTube/Facebook/embedded links). Admin manages via Nuerizo Control Center.',
+        releaseState: ReleaseState.public,
+        allowedAccessLevels: {FeatureAccessLevel.publicGuest},
+        updatedAt: now,
+      ),
       // ── Guest-first action gates ──────────────────────────────────
       // Fine-grained per-action flags so admin can flip exactly which
       // identity-bound actions require login, independent of the
