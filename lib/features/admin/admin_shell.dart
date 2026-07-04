@@ -16,6 +16,13 @@ import 'pages/audit_log_page.dart';
 /// Nuerizo Control Center — the internal operator console. Real
 /// working admin CRUD over the same local database every other surface
 /// reads from. Every mutation writes to the audit log automatically.
+///
+/// 🚨 WEB-ONLY, FOUNDER/STAFF-ONLY SURFACE 🚨 Reached only via
+/// `flutter build web --dart-define=IQRA_TARGET=control`
+/// (control.nuerizo.com) or a future `/control` web route — from a
+/// browser/laptop, never from the mobile app. There is no Admin or
+/// Super Admin login anywhere in the mobile APK's navigation; this shell
+/// must never be linked to from features/daily/** or features/studio/**.
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
 
@@ -38,13 +45,25 @@ class _AdminShellState extends State<AdminShell> {
   ];
 
   final _labels = const [
-    'Flags', 'Users', 'Pricing', 'CMS', 'Lectures', 'Ads', 'Analytics', 'Audit',
+    'Flags',
+    'Users',
+    'Pricing',
+    'CMS',
+    'Lectures',
+    'Ads',
+    'Analytics',
+    'Audit',
   ];
 
   final _icons = const [
-    Icons.flag_outlined, Icons.people_outline, Icons.attach_money,
-    Icons.article_outlined, Icons.play_circle_outline, Icons.campaign_outlined,
-    Icons.insights_outlined, Icons.history_outlined,
+    Icons.flag_outlined,
+    Icons.people_outline,
+    Icons.attach_money,
+    Icons.article_outlined,
+    Icons.play_circle_outline,
+    Icons.campaign_outlined,
+    Icons.insights_outlined,
+    Icons.history_outlined,
   ];
 
   @override

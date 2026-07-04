@@ -7,11 +7,16 @@ import '../../core/widgets/iqra_logo.dart';
 import '../../core/widgets/ornaments.dart';
 import '../../core/state/app_state.dart';
 import '../onboarding/onboarding_screen.dart';
-import '../hub/hub_shell.dart';
+import '../daily/daily_shell.dart';
 
 /// Launch flow step 1: a brief brand splash, then guests and signed-in
-/// users alike land straight on the guest-accessible IQRA Hub — nobody
-/// is forced through login before this point.
+/// users alike land straight on the guest-accessible IQRA Daily home
+/// screen (the consumer mobile app) — nobody is forced through login
+/// before this point.
+///
+/// NOTE: The "IQRA Hub" ecosystem launcher (features/hub/hub_shell.dart)
+/// is a WEB-ONLY surface used by the public marketing site build
+/// (IQRA_TARGET=website). It must never be the mobile APK's home screen.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -32,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => appState.onboardingComplete
-            ? const HubShell()
+            ? const DailyShell()
             : const OnboardingScreen(),
       ),
     );

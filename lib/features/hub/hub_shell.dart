@@ -18,6 +18,13 @@ import '../../core/auth/login_gate.dart';
 
 /// IQRA Hub: the ecosystem launcher. Shows every module the signed-in
 /// user's roles unlock, gated by real feature flags — not a static list.
+///
+/// 🚨 WEB-ONLY SURFACE 🚨 This screen is used exclusively by the public
+/// marketing website build (`flutter build web
+/// --dart-define=IQRA_TARGET=website`, see main.dart). It is NEVER the
+/// mobile app's home screen — the mobile APK boots straight into
+/// [DailyShell] (features/daily/daily_shell.dart). Do not wire this
+/// screen back into the mobile splash/onboarding flow.
 class HubShell extends StatelessWidget {
   const HubShell({super.key});
 
@@ -42,8 +49,9 @@ class HubShell extends StatelessWidget {
         color: IqraTokens.emeraldLt,
         flagKey: 'daily.app',
         locked: false,
-        onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DailyShell())),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const DailyShell())),
       ),
       if (user == null || user.hasRole(AppRole.student))
         _ModuleCard(
@@ -57,9 +65,11 @@ class HubShell extends StatelessWidget {
             context,
             isLoggedIn: user != null,
             title: 'Sign in to view Student',
-            message: 'Your classes, memorization tracker, and homework are saved to your account.',
-            onAuthenticated: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const StudentShell())),
+            message:
+                'Your classes, memorization tracker, and homework are saved to your account.',
+            onAuthenticated: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const StudentShell())),
           ),
         ),
       if (user == null || user.hasRole(AppRole.parent))
@@ -74,9 +84,11 @@ class HubShell extends StatelessWidget {
             context,
             isLoggedIn: user != null,
             title: 'Sign in to view Parent Dashboard',
-            message: "Track your child's progress, attendance, and invoices from your own account.",
-            onAuthenticated: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const ParentShell())),
+            message:
+                "Track your child's progress, attendance, and invoices from your own account.",
+            onAuthenticated: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ParentShell())),
           ),
         ),
       if (user == null || user.hasRole(AppRole.teacher))
@@ -91,9 +103,11 @@ class HubShell extends StatelessWidget {
             context,
             isLoggedIn: user != null,
             title: 'Sign in to open Studio',
-            message: 'Teachers sign in to manage classes, students, and earnings.',
-            onAuthenticated: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const StudioShell())),
+            message:
+                'Teachers sign in to manage classes, students, and earnings.',
+            onAuthenticated: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const StudioShell())),
           ),
         ),
       if (user == null || appState.isStaff)
@@ -108,9 +122,11 @@ class HubShell extends StatelessWidget {
             context,
             isLoggedIn: user != null,
             title: 'Admin sign-in required',
-            message: 'The Nuerizo Control Center is restricted to Academy Admin and Super Admin accounts.',
-            onAuthenticated: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const AdminShell())),
+            message:
+                'The Nuerizo Control Center is restricted to Academy Admin and Super Admin accounts.',
+            onAuthenticated: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AdminShell())),
           ),
         ),
     ];
@@ -133,7 +149,9 @@ class HubShell extends StatelessWidget {
                         children: [
                           Text('IQRA Hub', style: text.cardTitle(size: 18)),
                           Text(
-                            user != null ? 'Welcome, ${user.name}' : 'Ecosystem launcher',
+                            user != null
+                                ? 'Welcome, ${user.name}'
+                                : 'Ecosystem launcher',
                             style: text.metaDim(),
                           ),
                         ],
@@ -153,13 +171,23 @@ class HubShell extends StatelessWidget {
                     else
                       OutlinedButton(
                         onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          side: BorderSide(color: IqraTokens.gold.withValues(alpha: 0.6)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          side: BorderSide(
+                            color: IqraTokens.gold.withValues(alpha: 0.6),
+                          ),
                         ),
-                        child: const Text('Log In', style: TextStyle(fontSize: 12.5)),
+                        child: const Text(
+                          'Log In',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
                       ),
                   ],
                 ),
@@ -189,7 +217,11 @@ class HubShell extends StatelessWidget {
     );
   }
 
-  Widget _buildModuleTile(BuildContext context, _ModuleCard m, FeatureFlagRepository flags) {
+  Widget _buildModuleTile(
+    BuildContext context,
+    _ModuleCard m,
+    FeatureFlagRepository flags,
+  ) {
     final s = IqraSurface.dark;
     final text = IqraText(s);
     final flag = flags.getByKey(m.flagKey);
@@ -222,13 +254,18 @@ class HubShell extends StatelessWidget {
                   Row(
                     children: [
                       Text(m.title, style: text.cardTitle(size: 15)),
-                      if (flag != null && flag.releaseState != ReleaseState.public) ...[
+                      if (flag != null &&
+                          flag.releaseState != ReleaseState.public) ...[
                         const SizedBox(width: 8),
                         ReleaseBadge(state: flag.releaseState, fontSize: 8.5),
                       ],
                       if (m.locked) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.lock_outline, size: 13, color: s.appTextMuted),
+                        Icon(
+                          Icons.lock_outline,
+                          size: 13,
+                          color: s.appTextMuted,
+                        ),
                       ],
                     ],
                   ),
@@ -244,7 +281,11 @@ class HubShell extends StatelessWidget {
     );
   }
 
-  Widget _websiteFooterCard(BuildContext context, IqraText text, IqraSurface s) {
+  Widget _websiteFooterCard(
+    BuildContext context,
+    IqraText text,
+    IqraSurface s,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

@@ -6,8 +6,12 @@ import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../data/repositories/user_repository.dart';
 import 'signup_screen.dart';
-import '../hub/hub_shell.dart';
 
+/// Customer / User login. Reached from the mobile app's Profile tab, from
+/// any "sign in required" prompt, or from the web Studio/Control/Website
+/// surfaces. On success it simply pops back to wherever the app's root
+/// screen is (IQRA Daily on mobile) — it never routes to the ecosystem
+/// Hub, which is a web-only concept.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -44,10 +48,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       await context.read<AppState>().login(user);
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HubShell()),
-        (route) => false,
-      );
+      // Simply pop back to whatever screen pushed this Login screen
+      // (Profile tab, a GuestLockedScreen, or a "sign in required"
+      // prompt). That caller already watches AppState via Provider, so
+      // it rebuilds showing the now-signed-in view automatically. Login
+      // never hard-navigates to a specific ecosystem shell.
+      Navigator.of(context).pop();
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -96,7 +102,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _emailCtrl,
                     style: TextStyle(color: IqraTokens.appTextDark),
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(hintText: 'you@example.com'),
+                    decoration: const InputDecoration(
+                      hintText: 'you@example.com',
+                    ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Email is required';
                       if (!v.contains('@')) return 'Enter a valid email';
@@ -113,7 +121,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: '••••••••',
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           color: IqraTokens.appTextMutedDark,
                           size: 20,
                         ),
@@ -132,11 +142,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: IqraTokens.stateDanger.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: IqraTokens.stateDanger.withValues(alpha: 0.4)),
+                        border: Border.all(
+                          color: IqraTokens.stateDanger.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Text(
                         _error!,
-                        style: TextStyle(color: IqraTokens.stateDanger.withValues(alpha: 0.95), fontSize: 12.5),
+                        style: TextStyle(
+                          color: IqraTokens.stateDanger.withValues(alpha: 0.95),
+                          fontSize: 12.5,
+                        ),
                       ),
                     ),
                   ],
@@ -173,16 +188,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontFamily: IqraFonts.sans,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1,
-            color: IqraTokens.appTextDimDark,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontFamily: IqraFonts.sans,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1,
+        color: IqraTokens.appTextDimDark,
+      ),
+    ),
+  );
 }

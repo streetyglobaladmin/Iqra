@@ -5,7 +5,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../models/prayer_settings.dart';
-import '../hub/hub_shell.dart';
+import '../daily/daily_shell.dart';
 
 /// Real first-run flow: welcome -> location -> madhab -> calculation
 /// method -> begin. Persists a working [PrayerSettings] object that the
@@ -63,7 +63,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
             height: 3,
             decoration: BoxDecoration(
-              color: active ? IqraTokens.gold : IqraTokens.gold.withValues(alpha: 0.15),
+              color: active
+                  ? IqraTokens.gold
+                  : IqraTokens.gold.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -137,20 +139,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _stepTitle('Where are you?', 'We use your location to calculate accurate prayer times and Qibla direction.'),
+          _stepTitle(
+            'Where are you?',
+            'We use your location to calculate accurate prayer times and Qibla direction.',
+          ),
           const SizedBox(height: 20),
           ..._cities.map((c) {
             final selected = _location.city == c.$1.split(',').first;
             return _choiceCard(
               title: c.$1,
               selected: selected,
-              onTap: () => setState(() => _location = Location(
-                    lat: c.$2,
-                    lng: c.$3,
-                    city: c.$1.split(',').first,
-                    countryCode: c.$4,
-                    tzOffsetHours: c.$5,
-                  )),
+              onTap: () => setState(
+                () => _location = Location(
+                  lat: c.$2,
+                  lng: c.$3,
+                  city: c.$1.split(',').first,
+                  countryCode: c.$4,
+                  tzOffsetHours: c.$5,
+                ),
+              ),
             );
           }),
         ],
@@ -163,13 +170,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _stepTitle('Which madhab do you follow?', 'This affects the Asr prayer time calculation (shadow length method).'),
+          _stepTitle(
+            'Which madhab do you follow?',
+            'This affects the Asr prayer time calculation (shadow length method).',
+          ),
           const SizedBox(height: 20),
-          ...Madhab.values.map((m) => _choiceCard(
-                title: m.label,
-                selected: _madhab == m,
-                onTap: () => setState(() => _madhab = m),
-              )),
+          ...Madhab.values.map(
+            (m) => _choiceCard(
+              title: m.label,
+              selected: _madhab == m,
+              onTap: () => setState(() => _madhab = m),
+            ),
+          ),
         ],
       ),
     );
@@ -180,13 +192,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _stepTitle('Calculation method', 'Choose the convention used by scholars in your region.'),
+          _stepTitle(
+            'Calculation method',
+            'Choose the convention used by scholars in your region.',
+          ),
           const SizedBox(height: 20),
-          ...CalcMethod.values.map((m) => _choiceCard(
-                title: m.label,
-                selected: _calcMethod == m,
-                onTap: () => setState(() => _calcMethod = m),
-              )),
+          ...CalcMethod.values.map(
+            (m) => _choiceCard(
+              title: m.label,
+              selected: _calcMethod == m,
+              onTap: () => setState(() => _calcMethod = m),
+            ),
+          ),
         ],
       ),
     );
@@ -257,8 +274,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               if (selected)
                 const Icon(Icons.check_circle, color: IqraTokens.gold, size: 20)
               else
-                Icon(Icons.circle_outlined,
-                    color: IqraTokens.appTextMutedDark, size: 20),
+                Icon(
+                  Icons.circle_outlined,
+                  color: IqraTokens.appTextMutedDark,
+                  size: 20,
+                ),
             ],
           ),
         ),
@@ -305,11 +325,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
     await appState.completeOnboarding(settings);
     if (mounted) {
-      // Guest-first: finishing onboarding lands on the Hub directly,
+      // Guest-first: finishing onboarding lands on IQRA Daily directly,
       // never a forced login screen.
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HubShell()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const DailyShell()));
     }
   }
 }

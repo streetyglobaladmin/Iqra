@@ -1,38 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../models/app_role.dart';
-import '../../models/student_profile.dart';
 import '../../models/teacher_profile.dart';
 import '../../data/repositories/user_repository.dart';
-import '../../data/repositories/student_repository.dart';
 import '../../data/repositories/teacher_repository.dart';
-import '../../data/repositories/referral_repository.dart';
-import 'package:uuid/uuid.dart';
+import 'studio_shell.dart';
 
-/// Student / Parent signup — the only self-serve account creation flow
-/// exposed inside the mobile app. Teachers/scholars do NOT sign up here;
-/// they go through the "Apply as Scholar" flow inside IQRA Studio
-/// (see features/studio/studio_preview_screen.dart), which is a
-/// separate, vetted onboarding path. Admin/Super Admin accounts are never
-/// created from the mobile app at all.
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+/// "Apply as Scholar" — the vetted registration flow for teachers, kept
+/// separate from the mobile app's regular Student/Parent signup screen.
+/// Creates an account with the Teacher/Scholar role plus a starter
+/// [TeacherProfile], then opens IQRA Studio directly.
+class StudioApplyScreen extends StatefulWidget {
+  const StudioApplyScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<StudioApplyScreen> createState() => _StudioApplyScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _StudioApplyScreenState extends State<StudioApplyScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _referralCtrl = TextEditingController();
-  AppRole _selectedRole = AppRole.student;
+  final _bioCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -41,7 +36,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _referralCtrl.dispose();
+    _bioCtrl.dispose();
     super.dispose();
   }
 
@@ -52,57 +47,29 @@ class _SignupScreenState extends State<SignupScreen> {
       _error = null;
     });
     try {
-      final referred = _referralCtrl.text.trim().isEmpty
-          ? null
-          : _referralCtrl.text.trim();
       final user = await UserRepository.instance.register(
         email: _emailCtrl.text,
         password: _passwordCtrl.text,
         name: _nameCtrl.text,
-        roles: [_selectedRole],
-        referredByCode: referred,
+        roles: [AppRole.teacher],
       );
 
-      // Create the corresponding domain profile so the role's dashboard
-      // has real backing data from the very first login.
-      if (_selectedRole == AppRole.student) {
-        await StudentRepository.instance.upsert(
-          StudentProfile(
-            id: const Uuid().v4(),
-            userId: user.id,
-            name: user.name,
-          ),
-        );
-      } else if (_selectedRole == AppRole.teacher) {
-        await TeacherRepository.instance.upsert(
-          TeacherProfile(
-            id: const Uuid().v4(),
-            userId: user.id,
-            name: user.name,
-            createdAt: DateTime.now(),
-          ),
-        );
-      }
-
-      if (referred != null) {
-        // Look up the referrer by code among existing users.
-        final all = UserRepository.instance.getAll();
-        final referrer = all.where((u) => u.referralCode == referred).toList();
-        if (referrer.isNotEmpty) {
-          await ReferralRepository.instance.recordSignupWithCode(
-            code: referred,
-            inviteeUserId: user.id,
-            referrerUserId: referrer.first.id,
-          );
-        }
-      }
+      await TeacherRepository.instance.upsert(
+        TeacherProfile(
+          id: const Uuid().v4(),
+          userId: user.id,
+          name: user.name,
+          bio: _bioCtrl.text.trim(),
+          createdAt: DateTime.now(),
+        ),
+      );
 
       if (!mounted) return;
       await context.read<AppState>().login(user);
       if (!mounted) return;
-      // Simply pop back to whatever screen pushed this Signup screen —
-      // see the matching note in login_screen.dart.
-      Navigator.of(context).pop();
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const StudioShell()));
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -114,7 +81,10 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: IqraTokens.emeraldDeep,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Apply as Scholar'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -126,7 +96,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 const Center(child: IqraLogoMark(size: 60)),
                 const SizedBox(height: 16),
                 Text(
-                  'Create your account',
+                  'Register as a Scholar',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: IqraFonts.display,
@@ -135,52 +105,17 @@ class _SignupScreenState extends State<SignupScreen> {
                     color: IqraTokens.appTextDark,
                   ),
                 ),
-                const SizedBox(height: 24),
-                _label('I am a...'),
+                const SizedBox(height: 6),
                 Text(
-                  'Teachers/scholars: use "Apply as Scholar" inside IQRA Studio instead.',
+                  'Create your IQRA Studio teacher account to start teaching online.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: IqraFonts.sans,
-                    fontSize: 11,
-                    color: IqraTokens.appTextMutedDark,
+                    fontSize: 12.5,
+                    color: IqraTokens.appTextDimDark,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      [
-                        // Mobile app self-serve signup is Student/Parent only.
-                        // Scholar accounts are created via the vetted
-                        // "Apply as Scholar" flow inside IQRA Studio, and
-                        // Admin/Super Admin accounts are never created here.
-                        AppRole.student,
-                        AppRole.parent,
-                      ].map((role) {
-                        final selected = _selectedRole == role;
-                        return ChoiceChip(
-                          label: Text(role.label),
-                          selected: selected,
-                          onSelected: (_) =>
-                              setState(() => _selectedRole = role),
-                          selectedColor: IqraTokens.gold.withValues(alpha: 0.2),
-                          labelStyle: TextStyle(
-                            color: selected
-                                ? IqraTokens.gold
-                                : IqraTokens.appTextDimDark,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          backgroundColor: IqraTokens.appCardDark,
-                          side: BorderSide(
-                            color: selected
-                                ? IqraTokens.gold
-                                : IqraTokens.appBorderDark,
-                          ),
-                        );
-                      }).toList(),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 _label('Full name'),
                 TextFormField(
                   controller: _nameCtrl,
@@ -214,11 +149,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                _label('Referral code (optional)'),
+                _label('Short bio / specialties (optional)'),
                 TextFormField(
-                  controller: _referralCtrl,
+                  controller: _bioCtrl,
+                  maxLines: 3,
                   style: TextStyle(color: IqraTokens.appTextDark),
-                  decoration: const InputDecoration(hintText: 'IQRA-XXXXXXXX'),
+                  decoration: const InputDecoration(
+                    hintText:
+                        'e.g. Tajwīd, Ḥifẓ, Fiqh — 8 years teaching experience',
+                  ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 14),
@@ -249,7 +188,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             color: IqraTokens.ink,
                           ),
                         )
-                      : const Text('Create Account'),
+                      : const Text('Submit Application'),
                 ),
                 const SizedBox(height: 24),
               ],
