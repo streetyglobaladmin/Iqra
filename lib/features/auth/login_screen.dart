@@ -5,6 +5,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../services/iqra_api_service.dart';
 import 'signup_screen.dart';
 
 /// Customer / User login. Reached from the mobile app's Profile tab, from
@@ -54,6 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // it rebuilds showing the now-signed-in view automatically. Login
       // never hard-navigates to a specific ecosystem shell.
       Navigator.of(context).pop();
+    } on IqraApiException catch (e) {
+      setState(() => _error = e.message);
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {

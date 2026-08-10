@@ -5,6 +5,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/state/app_state.dart';
 import '../../../models/app_role.dart';
 import '../../../models/user_account.dart';
+import '../../../services/iqra_api_service.dart';
+import '../../../data/repositories/user_repository.dart';
 import '../qibla/qibla_screen.dart';
 import '../tasbih/tasbih_screen.dart';
 import '../duas/duas_screen.dart';
@@ -19,16 +21,42 @@ import '../../student/student_shell.dart';
 import '../../parent/parent_shell.dart';
 import '../../studio/studio_preview_screen.dart';
 
-/// Profile tab — the mobile app's account & settings surface. Replaces
-/// the old ecosystem-launcher-flavoured "More" screen. From here a guest
-/// can create a Student/Parent account, sign in, or open IQRA Studio
-/// (which itself gates Scholar login behind its own preview screen).
-///
-/// There is intentionally NO Admin / Super Admin / Nuerizo Control
-/// Center entry point anywhere on this screen — that surface is web-only
-/// (control.nuerizo.com), reached from a browser, never from the app.
-class ProfileScreen extends StatelessWidget {
+/// Profile tab — the mobile app's account & settings surface.
+/// Refreshes the signed-in profile from `/me` on each visit.
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _refreshing = false;
+  String? _refreshError;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProfile();
+  }
+
+  Future<void> _refreshProfile() async {
+    final appState = context.read<AppState>();
+    if (appState.isGuest) return;
+    setState(() => _refreshing = true);
+    try {
+      final user = await UserRepository.instance.refreshCurrentUser();
+      if (user != null && mounted) {
+        await appState.login(user);
+      }
+    } on IqraApiException catch (e) {
+      if (mounted) setState(() => _refreshError = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _refreshError = e.toString());
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,180 +68,200 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: s.appBg,
       appBar: AppBar(title: const Text('Profile')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _accountCard(context, s, text, user),
-          const SizedBox(height: 20),
-          if (user == null) ...[
-            Text('GET STARTED', style: text.sectionHeader),
+      body: RefreshIndicator(
+        onRefresh: _refreshProfile,
+        color: IqraTokens.gold,
+        backgroundColor: s.appCard,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _accountCard(context, s, text, user),
+            if (_refreshing)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Center(child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )),
+              ),
+            if (_refreshError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Could not refresh profile: $_refreshError',
+                  style: TextStyle(color: IqraTokens.stateDanger, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            const SizedBox(height: 20),
+            if (user == null) ...[
+              Text('GET STARTED', style: text.sectionHeader),
+              const SizedBox(height: 10),
+              _actionTile(
+                context,
+                s,
+                text,
+                icon: Icons.login,
+                title: 'Customer / User Login',
+                subtitle: 'Sign in to an existing account',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+              ),
+              _actionTile(
+                context,
+                s,
+                text,
+                icon: Icons.person_add_alt_outlined,
+                title: 'Student / Parent Sign Up',
+                subtitle: 'Create a free account to save progress',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const SignupScreen())),
+              ),
+              const SizedBox(height: 20),
+            ] else ...[
+              Text('MY ACCOUNT', style: text.sectionHeader),
+              const SizedBox(height: 10),
+              if (user.hasRole(AppRole.student))
+                _actionTile(
+                  context,
+                  s,
+                  text,
+                  icon: Icons.school_outlined,
+                  title: 'Student Dashboard',
+                  subtitle: 'Classes, memorization & homework',
+                  color: IqraTokens.lapisLt,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const StudentShell())),
+                ),
+              if (user.hasRole(AppRole.parent))
+                _actionTile(
+                  context,
+                  s,
+                  text,
+                  icon: Icons.family_restroom_outlined,
+                  title: 'Parent Dashboard',
+                  subtitle: "Track your child's progress",
+                  color: IqraTokens.rubyLt,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const ParentShell())),
+                ),
+              const SizedBox(height: 20),
+            ],
+            Text('TEACH ON IQRA', style: text.sectionHeader),
             const SizedBox(height: 10),
             _actionTile(
               context,
               s,
               text,
-              icon: Icons.login,
-              title: 'Customer / User Login',
-              subtitle: 'Sign in to an existing account',
+              icon: Icons.workspace_premium_outlined,
+              title: 'IQRA Studio',
+              subtitle: 'Teach classes, manage students, earnings',
+              color: IqraTokens.saffron,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StudioPreviewScreen()),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text('EXPLORE', style: text.sectionHeader),
+            const SizedBox(height: 10),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.explore_outlined,
+              title: 'Qibla',
               onTap: () => Navigator.of(
                 context,
-              ).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+              ).push(MaterialPageRoute(builder: (_) => const QiblaScreen())),
             ),
             _actionTile(
               context,
               s,
               text,
-              icon: Icons.person_add_alt_outlined,
-              title: 'Student / Parent Sign Up',
-              subtitle: 'Create a free account to save progress',
+              icon: Icons.circle_outlined,
+              title: 'Tasbīḥ',
               onTap: () => Navigator.of(
                 context,
-              ).push(MaterialPageRoute(builder: (_) => const SignupScreen())),
+              ).push(MaterialPageRoute(builder: (_) => const TasbihScreen())),
             ),
-            const SizedBox(height: 20),
-          ] else ...[
-            Text('MY ACCOUNT', style: text.sectionHeader),
-            const SizedBox(height: 10),
-            if (user.hasRole(AppRole.student))
-              _actionTile(
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.favorite_border,
+              title: 'Duʿās',
+              onTap: () => Navigator.of(
                 context,
-                s,
-                text,
-                icon: Icons.school_outlined,
-                title: 'Student Dashboard',
-                subtitle: 'Classes, memorization & homework',
-                color: IqraTokens.lapisLt,
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const StudentShell())),
-              ),
-            if (user.hasRole(AppRole.parent))
-              _actionTile(
+              ).push(MaterialPageRoute(builder: (_) => const DuasScreen())),
+            ),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.menu_book_outlined,
+              title: 'Daily Hadith',
+              onTap: () => Navigator.of(
                 context,
-                s,
-                text,
-                icon: Icons.family_restroom_outlined,
-                title: 'Parent Dashboard',
-                subtitle: "Track your child's progress",
-                color: IqraTokens.rubyLt,
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const ParentShell())),
+              ).push(MaterialPageRoute(builder: (_) => const HadithScreen())),
+            ),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.play_circle_outline,
+              title: 'Public Lectures',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const LecturesScreen())),
+            ),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.calendar_month_outlined,
+              title: 'Hijri Calendar',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HijriCalendarScreen()),
               ),
-            const SizedBox(height: 20),
+            ),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.article_outlined,
+              title: 'Articles & Blog',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ArticlesScreen())),
+            ),
+            _actionTile(
+              context,
+              s,
+              text,
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            ),
+            const SizedBox(height: 24),
+            if (user != null)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    await appState.logout();
+                  },
+                  icon: Icon(Icons.logout, size: 16, color: s.appTextDim),
+                  label: Text('Sign out', style: TextStyle(color: s.appTextDim)),
+                ),
+              ),
           ],
-          Text('TEACH ON IQRA', style: text.sectionHeader),
-          const SizedBox(height: 10),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.workspace_premium_outlined,
-            title: 'IQRA Studio',
-            subtitle: 'Teach classes, manage students, earnings',
-            color: IqraTokens.saffron,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StudioPreviewScreen()),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text('EXPLORE', style: text.sectionHeader),
-          const SizedBox(height: 10),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.explore_outlined,
-            title: 'Qibla',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const QiblaScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.circle_outlined,
-            title: 'Tasbīḥ',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const TasbihScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.favorite_border,
-            title: 'Duʿās',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const DuasScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.menu_book_outlined,
-            title: 'Daily Hadith',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const HadithScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.play_circle_outline,
-            title: 'Public Lectures',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const LecturesScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.calendar_month_outlined,
-            title: 'Hijri Calendar',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const HijriCalendarScreen()),
-            ),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.article_outlined,
-            title: 'Articles & Blog',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ArticlesScreen())),
-          ),
-          _actionTile(
-            context,
-            s,
-            text,
-            icon: Icons.settings_outlined,
-            title: 'Settings',
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
-          ),
-          const SizedBox(height: 24),
-          if (user != null)
-            Center(
-              child: TextButton.icon(
-                onPressed: () async {
-                  // Guest-first: signing out returns to browsing as a
-                  // guest on this same Profile tab, never a forced
-                  // login screen.
-                  await appState.logout();
-                },
-                icon: Icon(Icons.logout, size: 16, color: s.appTextDim),
-                label: Text('Sign out', style: TextStyle(color: s.appTextDim)),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../../models/feature_access_level.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/preferences_repository.dart';
 import '../../data/repositories/feature_flag_repository.dart';
+import '../../services/iqra_api_service.dart';
 
 /// Root application state: current session, theme mode, active role
 /// context (a user with multiple roles can switch between Student /
@@ -32,7 +33,15 @@ class AppState extends ChangeNotifier {
     await _flagRepo.seedIfEmpty();
     onboardingComplete = _prefsRepo.onboardingComplete;
     themeMode = _prefsRepo.themeMode == 'light' ? ThemeMode.light : ThemeMode.dark;
-    currentUser = _userRepo.currentUser;
+
+    // If a JWT exists, validate it with the production API. A 401 clears
+    // the session and falls back to guest mode (IQRA is guest-first).
+    if (IqraAuthTokenStore.instance.hasToken) {
+      currentUser = await _userRepo.refreshCurrentUser();
+    } else {
+      currentUser = _userRepo.currentUser;
+    }
+
     if (currentUser != null && currentUser!.roles.isNotEmpty) {
       activeRole = currentUser!.roles.first;
     }

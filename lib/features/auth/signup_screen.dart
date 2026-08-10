@@ -6,12 +6,10 @@ import '../../core/widgets/iqra_logo.dart';
 import '../../core/state/app_state.dart';
 import '../../models/app_role.dart';
 import '../../models/student_profile.dart';
-import '../../models/teacher_profile.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/student_repository.dart';
-import '../../data/repositories/teacher_repository.dart';
-import '../../data/repositories/referral_repository.dart';
 import 'package:uuid/uuid.dart';
+import '../../services/iqra_api_service.dart';
 
 /// Student / Parent signup — the only self-serve account creation flow
 /// exposed inside the mobile app. Teachers/scholars do NOT sign up here;
@@ -55,6 +53,10 @@ class _SignupScreenState extends State<SignupScreen> {
       final referred = _referralCtrl.text.trim().isEmpty
           ? null
           : _referralCtrl.text.trim();
+
+      // The production backend currently supports student self-registration.
+      // The role selector is preserved in the UI; the API call always
+      // registers the account as a student.
       final user = await UserRepository.instance.register(
         email: _emailCtrl.text,
         password: _passwordCtrl.text,
@@ -63,8 +65,8 @@ class _SignupScreenState extends State<SignupScreen> {
         referredByCode: referred,
       );
 
-      // Create the corresponding domain profile so the role's dashboard
-      // has real backing data from the very first login.
+      // Create a lightweight local student profile so the Student dashboard
+      // has backing data from the first login.
       if (_selectedRole == AppRole.student) {
         await StudentRepository.instance.upsert(
           StudentProfile(
@@ -73,28 +75,6 @@ class _SignupScreenState extends State<SignupScreen> {
             name: user.name,
           ),
         );
-      } else if (_selectedRole == AppRole.teacher) {
-        await TeacherRepository.instance.upsert(
-          TeacherProfile(
-            id: const Uuid().v4(),
-            userId: user.id,
-            name: user.name,
-            createdAt: DateTime.now(),
-          ),
-        );
-      }
-
-      if (referred != null) {
-        // Look up the referrer by code among existing users.
-        final all = UserRepository.instance.getAll();
-        final referrer = all.where((u) => u.referralCode == referred).toList();
-        if (referrer.isNotEmpty) {
-          await ReferralRepository.instance.recordSignupWithCode(
-            code: referred,
-            inviteeUserId: user.id,
-            referrerUserId: referrer.first.id,
-          );
-        }
       }
 
       if (!mounted) return;
@@ -103,6 +83,8 @@ class _SignupScreenState extends State<SignupScreen> {
       // Simply pop back to whatever screen pushed this Signup screen —
       // see the matching note in login_screen.dart.
       Navigator.of(context).pop();
+    } on IqraApiException catch (e) {
+      setState(() => _error = e.message);
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {

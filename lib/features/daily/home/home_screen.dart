@@ -8,6 +8,7 @@ import '../../../core/widgets/ornaments.dart';
 import '../../../core/state/app_state.dart';
 import '../../../services/prayer_times_calculator.dart';
 import '../../../services/hijri_calendar.dart';
+import '../../../services/iqra_api_service.dart';
 import '../../../data/static/quran_content.dart';
 import '../../../data/repositories/lecture_repository.dart';
 import '../qibla/qibla_screen.dart';
@@ -16,6 +17,7 @@ import '../duas/duas_screen.dart';
 import '../hadith/hadith_screen.dart';
 import '../scholar/scholar_screen.dart';
 import '../lectures/lectures_screen.dart';
+import '../learn/learn_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,12 +30,47 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _timer;
   DateTime _now = DateTime.now();
 
+  bool _apiLoading = true;
+  String? _apiError;
+  AppHomeResponse? _homeData;
+
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
+    _loadHomeData();
+  }
+
+  Future<void> _loadHomeData() async {
+    setState(() {
+      _apiLoading = true;
+      _apiError = null;
+    });
+    try {
+      final data = await IqraApiService.instance.getAppHome();
+      if (mounted) setState(() => _homeData = data);
+    } on IqraApiException catch (e) {
+      if (mounted) {
+        // Offline fallback: show cached home payload if available.
+        final cached = IqraApiService.instance.getAppHomeCached();
+        setState(() {
+          _homeData = cached;
+          _apiError = cached == null ? e.message : null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        final cached = IqraApiService.instance.getAppHomeCached();
+        setState(() {
+          _homeData = cached;
+          _apiError = cached == null ? e.toString() : null;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _apiLoading = false);
+    }
   }
 
   @override
@@ -83,42 +120,321 @@ class _HomeScreenState extends State<HomeScreen> {
     final hijri = HijriCalendar.fromGregorian(_now);
     final verse = verseForToday();
 
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: _buildHero(context, s, text, nextKey, hh, mm, ss, useArabic, settings.location.city),
-        ),
-        SliverToBoxAdapter(
-          child: Transform.translate(
-            offset: const Offset(0, -28),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _buildDateCard(context, s, text, hijri, useArabic),
+    return RefreshIndicator(
+      onRefresh: _loadHomeData,
+      color: IqraTokens.gold,
+      backgroundColor: s.appCard,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: _buildHero(context, s, text, nextKey, hh, mm, ss, useArabic, settings.location.city),
+          ),
+          SliverToBoxAdapter(
+            child: Transform.translate(
+              offset: const Offset(0, -28),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildDateCard(context, s, text, hijri, useArabic),
+              ),
             ),
           ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: _buildPrayerRail(context, s, text, times, activeKey, useArabic),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: _buildVerseCard(context, s, text, verse),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: _buildQuickActions(context, s, text),
+            ),
+          ),
+          if (_homeData != null && _homeData!.featuredScholars.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: _buildFeaturedScholars(context, s, text),
+              ),
+            ),
+          if (_homeData != null && _homeData!.featuredClasses.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: _buildFeaturedClasses(context, s, text),
+              ),
+            ),
+          if (_homeData != null && _homeData!.latestLessons.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                child: _buildLatestLessons(context, s, text),
+              ),
+            ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              child: _buildPublicLearning(context, s, text),
+            ),
+          ),
+          if (_apiLoading)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+            ),
+          if (_apiError != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: _buildApiError(context, s, text),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApiError(BuildContext context, IqraSurface s, IqraText text) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: IqraTokens.stateDanger.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: IqraTokens.stateDanger.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_outlined, color: IqraTokens.stateDanger, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Offline: $_apiError',
+              style: TextStyle(color: IqraTokens.stateDanger.withValues(alpha: 0.95), fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturedScholars(BuildContext context, IqraSurface s, IqraText text) {
+    final scholars = _homeData?.featuredScholars ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('FEATURED SCHOLARS', style: text.sectionHeader),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const ScholarScreen())),
+              child: const Text('See all', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: _buildPrayerRail(context, s, text, times, activeKey, useArabic),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 128,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: scholars.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final scholar = scholars[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const ScholarScreen())),
+                child: Container(
+                  width: 150,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: s.appCard,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: s.appBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: IqraTokens.jewelForIndex(i),
+                        child: Text(
+                          scholar.name.isNotEmpty ? scholar.name[0].toUpperCase() : '?',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(scholar.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.body(size: 12.5, weight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(
+                        scholar.specialties.isEmpty ? 'Scholar' : scholar.specialties.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.metaDim(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: _buildVerseCard(context, s, text, verse),
+      ],
+    );
+  }
+
+  Widget _buildFeaturedClasses(BuildContext context, IqraSurface s, IqraText text) {
+    final classes = _homeData?.featuredClasses ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('FEATURED CLASSES', style: text.sectionHeader),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LearnScreen())),
+              child: const Text('See all', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 132,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: classes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final c = classes[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const LearnScreen())),
+                child: Container(
+                  width: 180,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: s.appCard,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: s.appBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: IqraTokens.emeraldLt.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(Icons.school_outlined, color: IqraTokens.emeraldLt, size: 18),
+                      ),
+                      const Spacer(),
+                      Text(c.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.body(size: 12.5, weight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(
+                        c.scholarName ?? c.scheduleText ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.metaDim(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: _buildQuickActions(context, s, text),
-          ),
+      ],
+    );
+  }
+
+  Widget _buildLatestLessons(BuildContext context, IqraSurface s, IqraText text) {
+    final lessons = _homeData?.latestLessons ?? [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('LATEST LESSONS', style: text.sectionHeader),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const LecturesScreen())),
+              child: const Text('See all', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: _buildPublicLearning(context, s, text),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 132,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: lessons.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final l = lessons[i];
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const LecturesScreen())),
+                child: Container(
+                  width: 180,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: s.appCard,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: s.appBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: IqraTokens.lapisLt.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(Icons.play_arrow, color: IqraTokens.lapisLt, size: 18),
+                      ),
+                      const Spacer(),
+                      Text(l.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.body(size: 12.5, weight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(
+                        l.videoStatus == 'ready' ? 'Video ready' : 'Coming soon',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.metaDim(),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
