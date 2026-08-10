@@ -190,8 +190,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   obscureText: true,
                   style: TextStyle(color: IqraTokens.appTextDark),
                   validator: (v) {
-                    if (v == null || v.length < 6)
+                    if (v == null || v.length < 6) {
                       return 'At least 6 characters';
+                    }
                     return null;
                   },
                 ),

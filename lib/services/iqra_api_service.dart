@@ -116,6 +116,7 @@ class IqraApiService {
   final _cache = IqraApiCache.instance;
 
   String get baseUrl => iqraApiBaseUrl;
+  IqraAuthTokenStore get tokenStore => _tokenStore;
 
   // ---------------------------------------------------------------------------
   // Auth

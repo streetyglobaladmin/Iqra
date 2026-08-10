@@ -118,9 +118,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Widget _buildBody(BuildContext context, IqraSurface s, IqraText text) {
     if (_loading) {
-      return const ListView(
-        physics: AlwaysScrollableScrollPhysics(),
-        children: [
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
           SizedBox(height: 240),
           Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ],
