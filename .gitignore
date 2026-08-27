@@ -3,6 +3,7 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 android/.gradle/
+android/.kotlin/
 android/app/build/
 ios/Pods/
 *.iml
