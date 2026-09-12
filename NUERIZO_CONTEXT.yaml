@@ -1,0 +1,17 @@
+schema: NUERIZO_PROJECT_CONTEXT
+schema_version: 1.0.0
+product: IQRA
+repository: streetyglobaladmin/Iqra
+classification: ACTIVE_NUERIZO_PRODUCT
+implementation_authority: {branch: main, checkpoint_rule: VERIFY_CURRENT_GIT_BEFORE_WORK}
+company_standard: {repo: streetyglobaladmin/nuerizo-console, version: 1.5.0}
+context:
+  prd: {status: active, authority_class: PRODUCT_INTENT, sources: [.nuerizo/PROJECT.yaml, README.md], rule: current IQRA product contract and explicit founder decisions govern scope}
+  agents: {status: active, authority_class: GOVERNANCE, sources: [AGENTS.md, external:NUERIZO-COMPANY-STANDARD-v1.5.0], rule: identify IQRA component and deployment target before editing}
+  design: {status: active, authority_class: PRODUCT_INTENT, sources: [README.md, assets/, lib/], rule: treat current approved IQRA experience separately from historical hosting and Studio wrapper lines}
+  architecture: {status: active, authority_class: PRODUCT_INTENT, sources: [.nuerizo/PROJECT.yaml, lib/services/iqra_api_service.dart, deploy/], rule: main app implementation authority is this repository; deployment ownership must be identified separately}
+  rules: {status: active, authority_class: GOVERNANCE, sources: [AGENTS.md, analysis_options.yaml, external:NUERIZO-COMPANY-STANDARD-v1.5.0], rule: company governance plus Flutter/project rules apply}
+  memory: {status: active, authority_class: OPERATIONAL, sources: [.nuerizo/CURRENT.yaml, .nuerizo/STAGE.yaml, external:NeoMemory/NuerizoCore], rule: state files route work; exact Git remains implementation authority}
+  decisions: {status: active, authority_class: PRODUCT_INTENT, sources: [.nuerizo/, README.md], rule: record durable IQRA decisions and component/deployment boundaries}
+  testing: {status: active, authority_class: RELEASE, sources: [test/, integration_test/, analysis_options.yaml], rule: app tests do not imply backend/hosting/Studio release health; verify each component independently}
+do_not_infer: [stale_readme_equals_current_backend_state, iqra_ecosystem_hostinger_is_equal_current_app_authority, studio_wrapper_release_equals_IQRA_platform_release]
