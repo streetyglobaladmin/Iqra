@@ -1,0 +1,19 @@
+project_id: iqra
+product: IQRA
+classification: ACTIVE_NUERIZO_PRODUCT
+repository: streetyglobaladmin/Iqra
+implementation_branch: main
+implementation_checkpoint_observed: d9b44b78bde540ad4e83c6ed9f63ca05649686f3
+product_intent_authority:
+  - explicit_current_founder_decision
+  - current IQRA product decisions/specifications
+implementation_authority: exact Git source in this repository for IQRA Flutter/application work
+related_repositories:
+  iqra-ecosystem-hostinger: historical_or_hosting_line_not_interchangeable_app_authority
+  iqra-studio-desktop: separate_desktop_wrapper_component
+known_documentation_drift:
+  - README claim that no live backend API is wired is stale relative to lib/services/iqra_api_service.dart
+release_rule: exact component scope + tests + auth/permissions + backend/deployment/runtime evidence required
+do_not_touch:
+  - credentials_or_signing_secrets
+  - unrelated IQRA component repositories without explicit scope
