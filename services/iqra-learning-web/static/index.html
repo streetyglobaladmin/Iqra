@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123a33">
+  <meta name="description" content="IQRA — learn Islam through meaningful guided lessons, practice, and reflection.">
+  <title>IQRA | Your learning journey</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to learning</a>
+  <header class="topbar">
+    <a class="wordmark" href="/" aria-label="IQRA home"><span class="mark" aria-hidden="true">ٱ</span> IQRA<span class="wordmark-period">.</span></a>
+    <nav aria-label="Main navigation"><a href="#why">The approach</a><a href="#tracks">Learning tracks</a><a href="#account" id="account-link">Your learning</a></nav>
+    <div class="identity"><span id="session-label">Guest</span><button id="signout" type="button" class="quiet" hidden>Sign out</button></div>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="main-title">
+      <div class="hero-copy">
+        <p class="eyebrow">A LITTLE KNOWLEDGE. A LOT OF MEANING.</p>
+        <h1 id="main-title">Every lesson<br>moves you <em>forward.</em></h1>
+        <p class="lede">A thoughtful space for Quran study, Arabic foundations, and steady progress. Learn at your pace, with content reviewed before it reaches you.</p>
+        <a href="#account" class="primary-link">Begin your journey <span aria-hidden="true">↗</span></a>
+        <div class="tiny-note">Adult learning and parent-supervised children's education</div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><div class="rays"></div><span class="arabic-word">اقْرَأْ</span><p>Read · Reflect · Grow</p></div>
+    </section>
+    <section id="why" class="why"><span class="section-number">01 / THE APPROACH</span><h2>Not another endless library.<br><em>A path you can follow.</em></h2><div class="steps"><div><span>01</span><strong>Learn something worthwhile</strong><p>Every lesson has a clear purpose and source.</p></div><div><span>02</span><strong>Practise with intention</strong><p>Short exercises help knowledge stay with you.</p></div><div><span>03</span><strong>Keep your progress</strong><p>Your Learning Passport remembers what you've mastered.</p></div></div></section>
+    <section id="tracks" class="tracks"><span class="section-number">02 / YOUR PATH</span><div class="section-title"><h2>Two journeys.<br><em>One purpose.</em></h2><p>Separate experiences for adults and children, with shared learning standards and independent privacy controls.</p></div><div class="track-grid"><article class="track adult"><span class="track-count">IQRA / ADULTS</span><div class="track-symbol">۞</div><h3>Deepen your understanding.</h3><p>Qur'an, recitation, meaning, practice, and verified guidance, one lesson at a time.</p><a href="#account">Explore adult lessons <span aria-hidden="true">↗</span></a></article><article class="track kids"><span class="track-count">IQRA KIDS / FAMILY</span><div class="track-symbol">ا ب ج</div><h3>Build a joyful foundation.</h3><p>Arabic letters, short activities, and gentle progress with a parent in control.</p><a href="#account">Explore kids learning <span aria-hidden="true">↗</span></a></article></div></section>
+    <section id="account" class="workspace"><span class="section-number">03 / LEARNING PASSPORT</span><h2>Pick up where you left off.</h2>
+      <p id="message" role="status" aria-live="polite" class="notice">Sign in to access your lessons and saved progress.</p>
+      <div id="auth-panel" class="auth-columns"><form id="login-form" class="paper"><h3>Welcome back</h3><label>Email <input required type="email" name="email" autocomplete="email"></label><label>Password <input required type="password" name="password" autocomplete="current-password"></label><button class="button" type="submit">Sign in</button></form><form id="register-form" class="paper"><h3>Create an account</h3><label>Your name <input required type="text" name="name" minlength="1" autocomplete="name"></label><label>Email <input required type="email" name="email" autocomplete="email"></label><label>Password (12+ characters) <input required type="password" name="password" minlength="12" autocomplete="new-password"></label><label>I am joining as <select name="role"><option value="adult">Adult learner</option><option value="parent">Parent / guardian</option></select></label><label class="consent"><input required type="checkbox" name="adult_confirmed" value="true"> I confirm I am an adult. Child profiles are managed by parents or guardians.</label><button class="button" type="submit">Create account</button></form></div>
+      <section id="learning-panel" class="learning-panel" hidden aria-label="Your learning"><div class="learning-header"><div><p class="eyebrow">YOUR LEARNING PASSPORT</p><h3 id="welcome">Your journey</h3></div><label>Learning profile <select id="profile-select"></select></label></div><div id="parent-panel" hidden class="parent-form"><form id="child-form"><strong>Add a parent-managed child profile</strong><div class="inline-fields"><label>First name <input required name="name" maxlength="100"></label><label>Age group <select name="age_band"><option value="6-8">6–8 years</option><option value="9-12">9–12 years</option></select></label><button class="button" type="submit">Add child</button></div></form></div><div id="lesson-list" class="lesson-list" aria-live="polite"></div></section>
+      <section id="staff-panel" hidden class="paper staff"><h3 id="staff-title">Content publishing</h3><p>New lessons stay unavailable to learners until a qualified content reviewer signs off and an administrator publishes them.</p><div id="staff-lessons"></div></section>
+    </section>
+  </main>
+  <footer><span class="wordmark">IQRA<span class="wordmark-period">.</span></span><p>Built for meaningful Islamic learning, with care for learners and families.</p><p>Part of Nuerizo · Content is published only after review.</p></footer>
+</body>
+</html>
