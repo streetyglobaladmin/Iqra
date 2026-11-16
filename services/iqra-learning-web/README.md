@@ -72,3 +72,30 @@ Supported endpoints under `/api/v1`:
 - `POST /admin/lessons/{id}/review`, `POST /admin/lessons/{id}/publish`
 
 The **next accepted milestone** requires: (1) identify actual website backend/API host and source; (2) locate IQRA Kids release code; (3) merge or adapt this learning vertical into the approved existing backend; (4) implement persistent migrations, invitations, content sources and media; (5) complete child/teacher/parent/admin workflows; (6) security/accessibility QA; (7) protected staging website URL and real cross-browser smoke tests; and (8) separate founder release approval.
+## Academy operations — REA review implementation
+
+This review branch adds original academy/education operations based on workflow lessons from [WebotApp College ERP](https://github.com/webotapp-academy/college-management-software). **No external ERP code was copied**; its repository does not have an identifiable top-level open-source license in the inspected tree. The Laravel starter's `composer.json` license does not independently license its bespoke management modules.
+
+Implemented staging-only API capabilities:
+- Founder/admin: create academies, assign verified `teacher` accounts to classes, view real academy counts.
+- Adult learner or parent account: enroll an owned learning profile in a class and submit one assignment per profile.
+- Assigned teacher: create assignments, grade submissions within the assigned class, record/update attendance.
+- Learner parent: see attendance and graded work only for a profile their account owns; other parents and unrelated teachers are denied.
+- Academy changes write server-side audit events, not browser-local Hive records.
+
+`python app.py bootstrap-teacher email@example.com` provisions a dedicated teacher account interactively in local/staging; not a production identity/teacher-vetting flow.
+
+API routes under `/api/v1`:
+- `POST /admin/academies`, `POST /admin/classes`, `GET /admin/academies/{academy_id}/summary`
+- `POST /academy/classes/{class_id}/enroll`
+- `POST /academy/classes/{class_id}/assignments`
+- `POST /academy/assignments/{assignment_id}/submit`
+- `POST /academy/submissions/{submission_id}/grade`
+- `POST /academy/classes/{class_id}/attendance`
+- `GET /academy/classes/{class_id}/progress?profile_id=...`
+
+All mutating endpoints require a session and same-site CSRF token. Both the base learning service and academy extensions refuse production startup, because operational account recovery, moderation, parental identity verification, reviewed migrations, concurrent-write handling, rate limiting, hosting ownership and real website integration have not passed release gates.
+
+**Test evidence:** six local automated tests passed in the bounded execution environment. This is not deployment or independently validated production proof. Run `python3 -m pytest -q` to reproduce against an isolated temporary SQLite database; never run test commands against real learner data.
+
+**Review:** See `docs/reviews/IQRA_COLLEGE_ERP_REA_2026-11-16.md` for the reuse decision, rejected campus-specific features, authorization risks and remaining integration blockers.
