@@ -74,6 +74,92 @@ class Attempt(Base):
     __table_args__ = (UniqueConstraint("profile_id", "event_id", name="uq_iqra_progress_event"),)
 
 
+# IQRA academy operations — original schema inspired by generic ERP workflows.
+class Academy(Base):
+    __tablename__ = "iqra_academies"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+
+class AcademyClass(Base):
+    __tablename__ = "iqra_academy_classes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    academy_id: Mapped[int] = mapped_column(ForeignKey("iqra_academies.id"), index=True)
+    teacher_id: Mapped[int] = mapped_column(ForeignKey("iqra_users.id"))
+    title: Mapped[str] = mapped_column(String(150))
+
+class AcademyEnrollment(Base):
+    __tablename__ = "iqra_academy_enrollments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("iqra_academy_classes.id"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("iqra_profiles.id"))
+    __table_args__ = (UniqueConstraint("class_id", "profile_id"),)
+
+class AcademyAssignment(Base):
+    __tablename__ = "iqra_academy_assignments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("iqra_academy_classes.id"))
+    title: Mapped[str] = mapped_column(String(160))
+    instructions: Mapped[str] = mapped_column(String(4000), default="")
+    max_score: Mapped[int] = mapped_column(Integer)
+
+class AcademySubmission(Base):
+    __tablename__ = "iqra_academy_submissions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    assignment_id: Mapped[int] = mapped_column(ForeignKey("iqra_academy_assignments.id"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("iqra_profiles.id"))
+    answer: Mapped[str] = mapped_column(String(4000))
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(String(4000), nullable=True)
+    __table_args__ = (UniqueConstraint("assignment_id", "profile_id"),)
+
+class AcademyAttendance(Base):
+    __tablename__ = "iqra_academy_attendance"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("iqra_academy_classes.id"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("iqra_profiles.id"))
+    day: Mapped[str] = mapped_column(String(10))
+    status: Mapped[str] = mapped_column(String(15))
+    __table_args__ = (UniqueConstraint("class_id", "profile_id", "day"),)
+
+class AcademyAudit(Base):
+    __tablename__ = "iqra_academy_audit"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    academy_id: Mapped[int] = mapped_column(ForeignKey("iqra_academies.id"), index=True)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("iqra_users.id"))
+    action: Mapped[str] = mapped_column(String(64))
+    target_id: Mapped[int] = mapped_column(Integer)
+    happened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class AcademyCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+
+class AcademyClassCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=150)
+    teacher_id: int = Field(gt=0)
+    academy_id: int = Field(gt=0)
+
+class AcademyEnroll(BaseModel):
+    profile_id: int = Field(gt=0)
+
+class AcademyTaskCreate(BaseModel):
+    title: str = Field(min_length=2, max_length=160)
+    instructions: str = Field(default="", max_length=4000)
+    max_score: int = Field(ge=1, le=1000)
+
+class AcademyTaskAnswer(BaseModel):
+    profile_id: int = Field(gt=0)
+    answer: str = Field(min_length=1, max_length=4000)
+
+class AcademyGrade(BaseModel):
+    score: int = Field(ge=0)
+    feedback: str = Field(default="", max_length=4000)
+
+class AcademyAttendanceMark(BaseModel):
+    profile_id: int = Field(gt=0)
+    day: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    status: Literal["present", "absent", "late", "excused"]
+
+
 hash_password = PasswordHasher()
 
 
@@ -363,14 +449,168 @@ def create_app(database_url: str | None = None, secret: str | None = None) -> Fa
         db.commit()
         return {"ok": True, "state": "published"}
 
+
+    # Academy operations: identity-bound, persistent, parent-owned learner records.
+    def classroom(db: Session, class_id: int) -> AcademyClass:
+        cls = db.get(AcademyClass, class_id)
+        if not cls:
+            raise HTTPException(404, "Class not found")
+        return cls
+
+    def assigned_teacher(user: User, cls: AcademyClass) -> None:
+        if user.role != "admin" and (user.role != "teacher" or cls.teacher_id != user.id):
+            raise HTTPException(403, "Not assigned to this class")
+
+    def enrolled(db: Session, cls: AcademyClass, profile_id: int) -> None:
+        if not db.scalar(select(AcademyEnrollment.id).where(
+                AcademyEnrollment.class_id == cls.id, AcademyEnrollment.profile_id == profile_id)):
+            raise HTTPException(403, "Learning profile not enrolled")
+
+    def audit(db: Session, cls: AcademyClass, user: User, action: str, target_id: int):
+        db.add(AcademyAudit(academy_id=cls.academy_id, actor_id=user.id,
+                            action=action, target_id=target_id))
+
+    @app.post("/api/v1/admin/academies", dependencies=[Depends(require_csrf)])
+    def add_academy(data: AcademyCreate, user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        require_role(user, "admin")
+        obj = Academy(name=data.name)
+        db.add(obj); db.flush()
+        db.add(AcademyAudit(academy_id=obj.id, actor_id=user.id,
+                            action="academy.created", target_id=obj.id))
+        db.commit()
+        return {"id": obj.id, "name": obj.name}
+
+    @app.post("/api/v1/admin/classes", dependencies=[Depends(require_csrf)])
+    def add_class(data: AcademyClassCreate, user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        require_role(user, "admin")
+        teacher = db.get(User, data.teacher_id)
+        if not db.get(Academy, data.academy_id) or not teacher or not teacher.active or teacher.role != "teacher":
+            raise HTTPException(422, "Select an active academy and teacher")
+        obj = AcademyClass(**data.model_dump())
+        db.add(obj); db.flush(); audit(db, obj, user, "class.created", obj.id); db.commit()
+        return {"id": obj.id, "title": obj.title}
+
+    @app.post("/api/v1/academy/classes/{class_id}/enroll", dependencies=[Depends(require_csrf)])
+    def join_class(class_id: int, data: AcademyEnroll, user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        # Parent enrollment is voluntary, and child profiles have no independent login.
+        require_role(user, "adult", "parent")
+        profile = owned_profile(db, user, data.profile_id)
+        cls = classroom(db, class_id)
+        if profile.kind == "kids" and user.role != "parent":
+            raise HTTPException(403, "Parent approval required")
+        if db.scalar(select(AcademyEnrollment.id).where(
+                AcademyEnrollment.class_id == cls.id, AcademyEnrollment.profile_id == profile.id)):
+            raise HTTPException(409, "Already enrolled")
+        db.add(AcademyEnrollment(class_id=cls.id, profile_id=profile.id))
+        audit(db, cls, user, "enrollment.created", profile.id); db.commit()
+        return {"enrolled": True, "class_id": cls.id, "profile_id": profile.id}
+
+    @app.post("/api/v1/academy/classes/{class_id}/assignments", dependencies=[Depends(require_csrf)])
+    def add_assignment(class_id: int, data: AcademyTaskCreate, user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        cls = classroom(db, class_id)
+        assigned_teacher(user, cls)
+        obj = AcademyAssignment(class_id=cls.id, **data.model_dump())
+        db.add(obj); db.flush(); audit(db, cls, user, "assignment.created", obj.id); db.commit()
+        return {"id": obj.id, "title": obj.title}
+
+    @app.post("/api/v1/academy/assignments/{assignment_id}/submit", dependencies=[Depends(require_csrf)])
+    def submit_homework(assignment_id: int, data: AcademyTaskAnswer,
+                        user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        require_role(user, "adult", "parent")
+        profile = owned_profile(db, user, data.profile_id)
+        task = db.get(AcademyAssignment, assignment_id)
+        if not task:
+            raise HTTPException(404, "Assignment not found")
+        cls = classroom(db, task.class_id)
+        enrolled(db, cls, profile.id)
+        if db.scalar(select(AcademySubmission.id).where(
+                AcademySubmission.assignment_id == task.id, AcademySubmission.profile_id == profile.id)):
+            raise HTTPException(409, "Already submitted")
+        obj = AcademySubmission(assignment_id=task.id, profile_id=profile.id, answer=data.answer)
+        db.add(obj); db.flush(); audit(db, cls, user, "submission.created", obj.id); db.commit()
+        return {"id": obj.id, "status": "submitted"}
+
+    @app.post("/api/v1/academy/submissions/{submission_id}/grade", dependencies=[Depends(require_csrf)])
+    def grade_homework(submission_id: int, data: AcademyGrade,
+                       user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        obj = db.get(AcademySubmission, submission_id)
+        if not obj:
+            raise HTTPException(404, "Submission not found")
+        task = db.get(AcademyAssignment, obj.assignment_id)
+        cls = classroom(db, task.class_id)
+        assigned_teacher(user, cls)
+        if data.score > task.max_score:
+            raise HTTPException(422, "Score exceeds maximum")
+        obj.score = data.score; obj.feedback = data.feedback
+        audit(db, cls, user, "submission.graded", obj.id); db.commit()
+        return {"id": obj.id, "score": obj.score, "max_score": task.max_score}
+
+    @app.post("/api/v1/academy/classes/{class_id}/attendance", dependencies=[Depends(require_csrf)])
+    def mark_attendance(class_id: int, data: AcademyAttendanceMark,
+                        user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        cls = classroom(db, class_id)
+        assigned_teacher(user, cls)
+        enrolled(db, cls, data.profile_id)
+        try:
+            datetime.strptime(data.day, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(422, "Invalid attendance date")
+        obj = db.scalar(select(AcademyAttendance).where(
+            AcademyAttendance.class_id == cls.id,
+            AcademyAttendance.profile_id == data.profile_id,
+            AcademyAttendance.day == data.day))
+        if obj:
+            obj.status = data.status
+        else:
+            obj = AcademyAttendance(class_id=cls.id, **data.model_dump())
+            db.add(obj)
+        db.flush(); audit(db, cls, user, "attendance.marked", obj.id); db.commit()
+        return {"status": obj.status, "day": obj.day}
+
+    @app.get("/api/v1/academy/classes/{class_id}/progress")
+    def class_progress(class_id: int, profile_id: int,
+                       user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        cls = classroom(db, class_id)
+        profile = db.get(Profile, profile_id)
+        if not profile:
+            raise HTTPException(404, "Learning profile not found")
+        if user.role in ("adult", "parent"):
+            owned_profile(db, user, profile_id)
+        else:
+            assigned_teacher(user, cls)
+        enrolled(db, cls, profile_id)
+        rows = db.execute(select(AcademySubmission.id, AcademySubmission.score,
+                   AcademySubmission.feedback, AcademyAssignment.title)
+                   .join(AcademyAssignment, AcademySubmission.assignment_id == AcademyAssignment.id)
+                   .where(AcademySubmission.profile_id == profile_id,
+                          AcademyAssignment.class_id == cls.id)).all()
+        attendance = db.execute(select(AcademyAttendance.day, AcademyAttendance.status).where(
+                   AcademyAttendance.profile_id == profile_id, AcademyAttendance.class_id == cls.id)).all()
+        return {"class_id": class_id, "profile_id": profile_id,
+                "assignments": [{"id": sid, "title": t, "score": sc, "feedback": f} for sid, sc, f, t in rows],
+                "attendance": [{"day": day, "status": status} for day, status in attendance]}
+
+    @app.get("/api/v1/admin/academies/{academy_id}/summary")
+    def academy_summary(academy_id: int, user: User = Depends(current_user), db: Session = Depends(db_dep)):
+        require_role(user, "admin")
+        if not db.get(Academy, academy_id):
+            raise HTTPException(404, "Academy not found")
+        class_ids = list(db.scalars(select(AcademyClass.id).where(AcademyClass.academy_id == academy_id)).all())
+        subs = select(AcademySubmission.id).join(AcademyAssignment,
+             AcademySubmission.assignment_id == AcademyAssignment.id).where(AcademyAssignment.class_id.in_(class_ids))
+        return {"classes": len(class_ids),
+                "enrollments": len(db.scalars(select(AcademyEnrollment.id).where(AcademyEnrollment.class_id.in_(class_ids))).all()),
+                "submissions": len(db.scalars(subs).all())}
+
+
     return app
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] not in ("bootstrap-admin", "bootstrap-reviewer"):
-        raise SystemExit("Usage: python app.py bootstrap-admin|bootstrap-reviewer email@example.com")
+    if len(sys.argv) != 3 or sys.argv[1] not in ("bootstrap-admin", "bootstrap-reviewer", "bootstrap-teacher"):
+        raise SystemExit("Usage: python app.py bootstrap-admin|bootstrap-reviewer|bootstrap-teacher email@example.com")
     make = create_app()
-    role = "admin" if sys.argv[1] == "bootstrap-admin" else "reviewer"
+    role = {"bootstrap-admin": "admin", "bootstrap-reviewer": "reviewer", "bootstrap-teacher": "teacher"}[sys.argv[1]]
     email = _email(sys.argv[2])
     pw = getpass.getpass("New password (12+ characters): ")
     if len(pw) < 12:
